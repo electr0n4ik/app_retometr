@@ -2,6 +2,9 @@
 #include <glib.h>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <regex>
 #include <filesystem>
 #include "pugixml.hpp"
 
@@ -48,6 +51,13 @@ GtkCellRenderer          *cr3;
 GtkCellRenderer          *cr4;
 GtkCellRenderer          *cr5;
 
+
+// Глобальные переменные для таблицы
+std::string name_object;
+double start_reg;
+std::string schematic_connect;
+std::string average_interval;
+double end_reg;
 
 // Функция для получения пути к исполняемому файлу
 std::string getExecutablePath() {
@@ -120,13 +130,55 @@ void on_button3_clicked(GtkButton *button, gpointer user_data)
     // Устанавливаем новый текст для label1
     gtk_label_set_text(GTK_LABEL(label1), "НАЖАЛ НА 3 КНОПКУ!!!");
 
-
-
-
     g_signal_connect(button6, "clicked", G_CALLBACK(on_button6_clicked), window2);
 
     gtk_widget_show_all(window2);
     //g_object_unref(G_OBJECT(builder));
+}
+
+std::vector<std::string> extractDataFromXML(const std::string& xmlText) {
+    std::regex timeStartRegex("TimeStart=\"(\\d+)\"");
+    std::regex timeStopRegex("TimeStop=\"(\\d+)\"");
+    std::regex nameObjectRegex("nameObject=\"([^\"]+)\"");
+    std::regex averagingIntervalTimeRegex("averaging_interval_time=\"(\\d+)\"");
+    std::regex averagingIntervalRegex("averaging_interval=\"(\\d+)\"");
+    std::regex activeCxemaRegex("active_cxema=\"(\\d+)\"");
+
+    std::vector<std::string> extractedData;
+
+    std::smatch match;
+
+    // Поиск кода времени TimeStart
+    if (std::regex_search(xmlText, match, timeStartRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск кода времени TimeStop
+    if (std::regex_search(xmlText, match, timeStopRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения nameObject
+    if (std::regex_search(xmlText, match, nameObjectRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения averaging_interval_time
+    if (std::regex_search(xmlText, match, averagingIntervalTimeRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения averaging_interval
+    if (std::regex_search(xmlText, match, averagingIntervalRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения active_cxema
+    if (std::regex_search(xmlText, match, activeCxemaRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    return extractedData;
 }
 
 //--------------------------------------//
@@ -135,8 +187,18 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
 {
     GtkBuilder    *builder = GTK_BUILDER(user_data);
     GtkWidget     *dialog1;
+
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
+
     gint res;
+    int i = 0;
+
+//    std::string name_object;
+//    double start_reg;
+//    std::string schematic_connect;
+//    std::string average_interval;
+//    double end_reg;
+
     dialog1 = gtk_file_chooser_dialog_new("Выбрать папку",
                                           GTK_WINDOW(user_data),
                                           action,
@@ -148,7 +210,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
 
     res = gtk_dialog_run(GTK_DIALOG(dialog1));
 
-    // Если пользователь выбрал папку, то вывести ее путь в label
+    // Если пользователь выбрал папку, то вывод в label
     if (res == GTK_RESPONSE_ACCEPT)
     {
         GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
@@ -156,6 +218,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
 
         for (const auto& entry : std::filesystem::directory_iterator(folder_path))
         {
+
             // проход по всем файлам в папке
             std::string file_path = entry.path().string();
             pugi::xml_document doc;
@@ -165,25 +228,49 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
                 continue;
             }
 
-            // вывод содержимого корневого элемента файла
-            // Устанавливаем новый текст для label1
-            gtk_label_set_text(GTK_LABEL(label1), folder_path);
-
             std::ostringstream ss;
             doc.print(ss);
             std::string str = ss.str();
-            gtk_label_set_text(GTK_LABEL(label1), str.c_str());
-            std::cout << std::endl;
-            std::cout << "\n\n";
+            std::vector<std::string> processedData = extractDataFromXML(str);
 
+            if (i == 0)
+            {
+                name_object = processedData[2];
+                start_reg = std::stod(processedData[0]);
+                end_reg = std::stod(processedData[1]);
+                schematic_connect = processedData[5];
+                average_interval = processedData[4];
+
+                std::cout << "\nНазвание объекта: " << name_object << "\nНачало регистрации:    " << start_reg / 1000;
+                std::cout << "\nОкончание регистрации: " << end_reg / 1000 << "\nСхема соединения: " << schematic_connect;
+                std::cout << "\nИнтервал усреднения: " << average_interval << "\n";
+                std::cout << std::endl; // Отладочный вывод
+            }
+
+            i += 1;
         }
         g_free(folder_path);
     }
     gtk_widget_destroy(dialog1);
 }
 
+// Обработчик сигнала для события "destroy" окна window2
+void on_window2_destroy(GtkWidget *widget, gpointer user_data) {
+    // Закрытие окна window2
+    gtk_widget_destroy(GTK_WIDGET(user_data));
+    // Выгрузка из памяти builder2 и других связанных объектов
+    g_object_unref(builder);
+}
+
 //--------------------------------------//
 int main (int argc, char *argv[]) {
+
+    // Инициализация глобальных переменных
+    name_object = " ";
+    start_reg = 0;
+    schematic_connect = " ";
+    average_interval = " ";
+    end_reg = 0;
 
     while(true)
 
@@ -202,13 +289,6 @@ int main (int argc, char *argv[]) {
 
         // Загрузка интерфейса из файла glade.glade
         GtkBuilder *builder = gtk_builder_new_from_file(gladeFilePath.c_str());
-
-
-        // Загрузка UI
-//        const gchar* uiFile = "../glade.glade";
-//        GBytes* bytes = loadFileContents(uiFile);
-//
-//        builder = gtk_builder_new_from_file(uiFile);
 
         window1 = GTK_WIDGET(gtk_builder_get_object(builder, "window1"));
         gtk_window_set_title(GTK_WINDOW(window1), "РЕТОМЕТР-М3");
@@ -239,20 +319,21 @@ int main (int argc, char *argv[]) {
 
         selection = GTK_TREE_SELECTION(gtk_builder_get_object(builder, "selection"));
 
-        gtk_tree_view_column_add_attribute(cx1, cr1, "text", 0);
-        gtk_tree_view_column_add_attribute(cx2, cr2, "text", 1);
-        gtk_tree_view_column_add_attribute(cx3, cr3, "text", 2);
-        gtk_tree_view_column_add_attribute(cx4, cr4, "text", 3);
-        gtk_tree_view_column_add_attribute(cx5, cr5, "text", 4);
+// TODO закоментил временно, потому что не устанавливается текст, подумать над этим
+//        gtk_tree_view_column_add_attribute(cx1, cr1, "text1", 0);
+//        gtk_tree_view_column_add_attribute(cx2, cr2, "text2", 1);
+//        gtk_tree_view_column_add_attribute(cx3, cr3, "text2", 2);
+//        gtk_tree_view_column_add_attribute(cx4, cr4, "text3", 3);
+//        gtk_tree_view_column_add_attribute(cx5, cr5, "text4", 4);
 
         GtkTreeIter iter;  // iterators
 
         gtk_list_store_append(liststore1, &iter);
-        gtk_list_store_set(liststore1, &iter, 0, "row 1 data", -1);
-        gtk_list_store_set(liststore1, &iter, 1, "row 1 data", -1);
-        gtk_list_store_set(liststore1, &iter, 2, "row 1 data", -1);
-        gtk_list_store_set(liststore1, &iter, 3, "row 1 data", -1);
-        gtk_list_store_set(liststore1, &iter, 4, "row 1 data", -1);
+        gtk_list_store_set(liststore1, &iter, 0, name_object.c_str(), -1);
+        gtk_list_store_set(liststore1, &iter, 1, start_reg, -1);
+        gtk_list_store_set(liststore1, &iter, 2, end_reg, -1);
+        gtk_list_store_set(liststore1, &iter, 3, schematic_connect.c_str(), -1);
+        gtk_list_store_set(liststore1, &iter, 4, average_interval.c_str(), -1);
 
         selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tv1));
 
@@ -262,6 +343,8 @@ int main (int argc, char *argv[]) {
         g_signal_connect(button3, "clicked", G_CALLBACK(on_button3_clicked), window1);
 
         g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+
+        g_signal_connect(window2, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
         gtk_builder_connect_signals(builder, NULL);
 
