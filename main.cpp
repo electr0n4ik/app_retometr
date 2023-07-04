@@ -1,8 +1,10 @@
 #include <gtk-3.0/gtk/gtk.h>
-#include <stdlib.h>
+#include <glib.h>
+#include <cstdlib>
 #include <iostream>
 #include <filesystem>
 #include "pugixml.hpp"
+
 
 GtkBuilder               *builder;
 //--------------------------------------//
@@ -47,6 +49,42 @@ GtkCellRenderer          *cr4;
 GtkCellRenderer          *cr5;
 
 
+// Функция для получения пути к исполняемому файлу
+std::string getExecutablePath() {
+    char path[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+    if (count != -1) {
+        path[count] = '\0';
+        return std::string(path);
+    }
+    return "";
+}
+
+// Функция для получения директории из пути
+std::string getDirectoryFromPath(const std::string& path) {
+    size_t lastSlashPos = path.find_last_of('/');
+    if (lastSlashPos != std::string::npos) {
+        return path.substr(0, lastSlashPos + 1);
+    }
+    return "";
+}
+
+// Функция для загрузки содержимого файла в память
+GBytes* loadFileContents(const gchar* filename) {
+    GError* error = NULL;
+    gsize fileSize;
+    gchar* fileContents = NULL;
+
+    if (!g_file_get_contents(filename, &fileContents, &fileSize, &error)) {
+        g_print("Failed to load file '%s': %s\n", filename, error->message);
+        g_error_free(error);
+        return NULL;
+    }
+
+    GBytes* bytes = g_bytes_new_static(fileContents, fileSize);
+
+    return bytes;
+}
 
 //--------------------------------------//
 //обработчик события для кнопки button2
@@ -68,7 +106,7 @@ void on_button6_clicked(GtkButton *button, GtkWidget *label1, gpointer user_data
 //обработчик события для кнопки button3
 void on_button3_clicked(GtkButton *button, gpointer user_data)
 {
-    builder = gtk_builder_new_from_file("test1.glade");
+    builder = gtk_builder_new_from_file("glade.glade");
     window2 = GTK_WIDGET(gtk_builder_get_object(builder, "window2"));
     gtk_window_set_title(GTK_WINDOW(window2), "О программе");
 
@@ -150,9 +188,28 @@ int main (int argc, char *argv[]) {
     while(true)
 
     {
+        // Инициализация GTK
         gtk_init(&argc, &argv);
 
-        builder = gtk_builder_new_from_file("test1.glade");
+        // Получение пути к исполняемому файлу
+        std::string executablePath = getExecutablePath();
+
+        // Получение директории из пути к исполняемому файлу
+        std::string executableDirectory = getDirectoryFromPath(executablePath);
+
+        // Формирование пути к файлу glade.glade (абсолютный или относительный относительно исполняемого файла)
+        std::string gladeFilePath = executableDirectory + "glade.glade";
+
+        // Загрузка интерфейса из файла glade.glade
+        GtkBuilder *builder = gtk_builder_new_from_file(gladeFilePath.c_str());
+
+
+        // Загрузка UI
+//        const gchar* uiFile = "../glade.glade";
+//        GBytes* bytes = loadFileContents(uiFile);
+//
+//        builder = gtk_builder_new_from_file(uiFile);
+
         window1 = GTK_WIDGET(gtk_builder_get_object(builder, "window1"));
         gtk_window_set_title(GTK_WINDOW(window1), "РЕТОМЕТР-М3");
         fixed1 = GTK_WIDGET(gtk_builder_get_object(builder, "fixed1"));
