@@ -8,7 +8,6 @@
 #include <filesystem>
 #include "pugixml.hpp"
 
-
 GtkBuilder               *builder;
 //--------------------------------------//
 // Создание некоторых объектов главного окна
@@ -52,12 +51,20 @@ GtkCellRenderer          *cr4;
 GtkCellRenderer          *cr5;
 
 
-// Глобальные переменные для таблицы
+//// Глобальные переменные для таблицы
 std::string name_object;
-double start_reg;
+double start_reg = 1000;
 std::string schematic_connect;
 std::string average_interval;
 double end_reg;
+
+struct UserData {
+    std::string name_object;
+    double start_reg;
+    std::string schematic_connect;
+    std::string average_interval;
+    double end_reg;
+};
 
 // Функция для получения пути к исполняемому файлу
 std::string getExecutablePath() {
@@ -119,9 +126,6 @@ void on_button3_clicked(GtkButton *button, gpointer user_data)
     builder = gtk_builder_new_from_file("glade.glade");
     window2 = GTK_WIDGET(gtk_builder_get_object(builder, "window2"));
     gtk_window_set_title(GTK_WINDOW(window2), "О программе");
-
-    //gtk_window_set_resizable(GTK_WINDOW(window2));
-    //gtk_window_activate_focus(GTK_WINDOW(window2));
 
     fixed2 = GTK_WIDGET(gtk_builder_get_object(builder, "fixed2"));
     labelabout = GTK_WIDGET(gtk_builder_get_object(builder, "labelabout"));
@@ -229,6 +233,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
 
             if (i == 0)
             {
+
                 name_object = processedData[2];
                 start_reg = std::stod(processedData[0]);
                 end_reg = std::stod(processedData[1]);
@@ -288,17 +293,17 @@ int main (int argc, char *argv[]) {
         button2 = GTK_WIDGET(gtk_builder_get_object(builder, "button2"));
         button3 = GTK_WIDGET(gtk_builder_get_object(builder, "button3"));
 
-//        view1 = GTK_WIDGET(gtk_builder_get_object(builder, "view1")); # TODO начать отсюда
-//        liststore1 = GTK_LIST_STORE(gtk_builder_get_object(builder, "liststore1"));
-//        tv1 = GTK_TREE_VIEW(gtk_builder_get_object(builder, "tv1"));
+        view1 = GTK_WIDGET(gtk_builder_get_object(builder, "view1")); // TODO начать отсюда
+        liststore1 = GTK_LIST_STORE(gtk_builder_get_object(builder, "liststore1"));
+        tv1 = GTK_TREE_VIEW(gtk_builder_get_object(builder, "tv1"));
 
-//        cx1 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx1"));
+        cx1 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx1"));
 //        cx2 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx2"));
 //        cx3 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx3"));
 //        cx4 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx4"));
 //        cx5 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx5"));
 
-//        cr1 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr1"));
+        cr1 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr1"));
 //        cr2 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr2"));
 //        cr3 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr3"));
 //        cr4 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr4"));
@@ -307,17 +312,16 @@ int main (int argc, char *argv[]) {
         selection = GTK_TREE_SELECTION(gtk_builder_get_object(builder, "selection"));
 
 // TODO закоментил временно, потому что не устанавливается текст, подумать над этим
-        gtk_tree_view_column_add_attribute(cx1, cr1, name_object.c_str(), 0);
+//        gtk_tree_view_column_add_attribute(cx1, cr1, data.name_object.c_str(), 0);
 //        gtk_tree_view_column_add_attribute(cx2, cr2, "text2", 1);
 //        gtk_tree_view_column_add_attribute(cx3, cr3, "text2", 2);
 //        gtk_tree_view_column_add_attribute(cx4, cr4, "text3", 3);
 //        gtk_tree_view_column_add_attribute(cx5, cr5, "text4", 4);
 
-        GtkTreeIter iter;  // iterators
-
-        gtk_list_store_append(liststore1, &iter);
-
-        gtk_list_store_set(liststore1, &iter, 0, name_object.c_str(), -1);
+//        GtkTreeIter iter;  // iterators
+//
+//        gtk_list_store_append(liststore1, &iter);
+//        gtk_list_store_set(liststore1, &iter, 0, data.name_object.c_str(), -1);
 //        gtk_list_store_set(liststore1, &iter, 1, start_reg, -1);
 //        gtk_list_store_set(liststore1, &iter, 2, end_reg, -1);
 //        gtk_list_store_set(liststore1, &iter, 3, schematic_connect.c_str(), -1);
@@ -327,21 +331,17 @@ int main (int argc, char *argv[]) {
 
         // Подключение обработчиков событий
         g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), window1);
-//        g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), liststore1);
-        g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), NULL);
+        g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), window1);
         g_signal_connect(button3, "clicked", G_CALLBACK(on_button3_clicked), window1);
 
         g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-
         g_signal_connect(window2, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
         gtk_builder_connect_signals(builder, NULL);
-
         gtk_widget_show_all(window1);
-
         gtk_main();
-
         g_object_unref(builder);
+
         if (gtk_main_quit){break;}
     }
     return EXIT_SUCCESS;
