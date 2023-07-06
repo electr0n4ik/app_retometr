@@ -18,11 +18,14 @@
   </object>
   <object class="GtkWindow" id="window1">
     <property name="can-focus">False</property>
+    <property name="window-position">center</property>
+    <property name="has-resize-grip">True</property>
     <child>
       <object class="GtkScrolledWindow" id="scrolled1">
         <property name="visible">True</property>
         <property name="can-focus">True</property>
-        <property name="shadow-type">in</property>
+        <property name="hscrollbar-policy">never</property>
+        <property name="vscrollbar-policy">never</property>
         <property name="propagate-natural-width">True</property>
         <property name="propagate-natural-height">True</property>
         <child>
@@ -98,25 +101,21 @@
                         <property name="can-focus">True</property>
                         <property name="model">liststore1</property>
                         <property name="expander-column">cx1</property>
+                        <property name="enable-search">False</property>
                         <property name="search-column">0</property>
+                        <property name="hover-expand">True</property>
                         <property name="show-expanders">False</property>
                         <property name="enable-grid-lines">both</property>
                         <property name="enable-tree-lines">True</property>
-                        <child internal-child="selection">
-                          <object class="GtkTreeSelection"/>
-                        </child>
+                        <signal name="row-activated" handler="row_activated" swapped="no"/>
                         <child>
                           <object class="GtkTreeViewColumn" id="cx1">
-                            <property name="resizable">True</property>
                             <property name="title" translatable="yes">Название объекта</property>
                             <property name="expand">True</property>
-                            <property name="clickable">True</property>
-                            <property name="sort-indicator">True</property>
                             <child>
-                              <object class="GtkCellRendererText" id="cr1">
-                                <property name="cell-background-gdk">#dededddddada</property>
-                              </object>
+                              <object class="GtkCellRendererText" id="cr1"/>
                               <attributes>
+                                <attribute name="scale">3</attribute>
                                 <attribute name="text">0</attribute>
                                 <attribute name="background-rgba">2</attribute>
                               </attributes>
@@ -131,9 +130,7 @@
                             <property name="clickable">True</property>
                             <property name="sort-indicator">True</property>
                             <child>
-                              <object class="GtkCellRendererText" id="cr2">
-                                <property name="cell-background-gdk">#dededddddada</property>
-                              </object>
+                              <object class="GtkCellRendererText" id="cr2"/>
                               <attributes>
                                 <attribute name="text">1</attribute>
                               </attributes>
@@ -148,9 +145,7 @@
                             <property name="clickable">True</property>
                             <property name="sort-indicator">True</property>
                             <child>
-                              <object class="GtkCellRendererText" id="cr3">
-                                <property name="cell-background-gdk">#dededddddada</property>
-                              </object>
+                              <object class="GtkCellRendererText" id="cr3"/>
                               <attributes>
                                 <attribute name="text">2</attribute>
                               </attributes>
@@ -165,9 +160,7 @@
                             <property name="clickable">True</property>
                             <property name="sort-indicator">True</property>
                             <child>
-                              <object class="GtkCellRendererText" id="cr4">
-                                <property name="cell-background-gdk">#dededddddada</property>
-                              </object>
+                              <object class="GtkCellRendererText" id="cr4"/>
                               <attributes>
                                 <attribute name="text">3</attribute>
                               </attributes>
@@ -182,9 +175,7 @@
                             <property name="clickable">True</property>
                             <property name="sort-indicator">True</property>
                             <child>
-                              <object class="GtkCellRendererText" id="cr5">
-                                <property name="cell-background-gdk">#dededddddada</property>
-                              </object>
+                              <object class="GtkCellRendererText" id="cr5"/>
                               <attributes>
                                 <attribute name="text">4</attribute>
                               </attributes>

@@ -22,7 +22,7 @@ GtkWidget                *label1;
 GtkWidget                *labelabout;
 
 //--------------------------------------//
-// Получаем кнопки главного окна
+// Получаем кнопки
 GtkWidget                *button1;
 GtkWidget                *button2;
 GtkWidget                *button3;
@@ -49,22 +49,6 @@ GtkCellRenderer          *cr2;
 GtkCellRenderer          *cr3;
 GtkCellRenderer          *cr4;
 GtkCellRenderer          *cr5;
-
-
-//// Глобальные переменные для таблицы
-std::string name_object;
-double start_reg = 1000;
-std::string schematic_connect;
-std::string average_interval;
-double end_reg;
-
-struct UserData {
-    std::string name_object;
-    double start_reg;
-    std::string schematic_connect;
-    std::string average_interval;
-    double end_reg;
-};
 
 // Функция для получения пути к исполняемому файлу
 std::string getExecutablePath() {
@@ -105,7 +89,7 @@ GBytes* loadFileContents(const gchar* filename) {
 
 //--------------------------------------//
 //обработчик события для кнопки button2
-void on_button2_clicked(GtkButton *button, gpointer user_data)
+void on_button2_clicked()
 {
     // Устанавливаем новый текст для label1
     gtk_label_set_text(GTK_LABEL(label1), "НАЖАЛ НА 2 КНОПКУ!!!");
@@ -197,6 +181,12 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
     gint res;
     int i = 0;
 
+    std::string name_object;
+    std::string start_reg;
+    std::string schematic_connect;
+    std::string average_interval;
+    std::string end_reg;
+
     dialog1 = gtk_file_chooser_dialog_new("Выбрать папку",
                                           GTK_WINDOW(user_data),
                                           action,
@@ -235,13 +225,38 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
             {
 
                 name_object = processedData[2];
-                start_reg = std::stod(processedData[0]);
-                end_reg = std::stod(processedData[1]);
+                start_reg = processedData[0];
+                end_reg = processedData[1];
                 schematic_connect = processedData[5];
-                average_interval = processedData[4];
+                average_interval = processedData[3];
 
-                std::cout << "\nНазвание объекта: " << name_object << "\nНачало регистрации:    " << start_reg / 1000;
-                std::cout << "\nОкончание регистрации: " << end_reg / 1000 << "\nСхема соединения: " << schematic_connect;
+                GtkListStore *liststore = GTK_LIST_STORE(user_data);
+
+                // Удаление первой строки
+//                GtkTreeIter first_row;
+//                if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(liststore), &first_row)) {
+//                    gtk_list_store_remove(liststore, &first_row);
+//                }
+                gtk_list_store_clear(liststore1);
+
+                GtkTreeIter iter;  // iterators
+
+                gtk_list_store_append(liststore1, &iter);
+                gtk_list_store_set(liststore1, &iter, 0, name_object.c_str(), -1);
+                gtk_list_store_set(liststore1, &iter, 1, start_reg.c_str(), -1);
+                gtk_list_store_set(liststore1, &iter, 2, end_reg.c_str(), -1);
+                gtk_list_store_set(liststore1, &iter, 3, schematic_connect.c_str(), -1);
+                gtk_list_store_set(liststore1, &iter, 4, average_interval.c_str(), -1);
+
+                // Добавление новых пустых строк в таблицу
+//                for (int i = 1; i < 10; i++) {
+//
+//                    gtk_list_store_append(liststore1, &iter);
+//                    gtk_list_store_set(liststore1, &iter, 0, "", -1);
+//                }
+
+                std::cout << "\nНазвание объекта: " << name_object << "\nНачало регистрации:    " << start_reg;
+                std::cout << "\nОкончание регистрации: " << end_reg << "\nСхема соединения: " << schematic_connect;
                 std::cout << "\nИнтервал усреднения: " << average_interval << "\n";
                 std::cout << std::endl; // Отладочный вывод
             }
@@ -261,6 +276,50 @@ void on_window2_destroy(GtkWidget *widget, gpointer user_data) {
     g_object_unref(builder);
 }
 
+// Создайте функцию-обработчик для сигнала "row-activated"
+void on_row_activated() {
+    // Устанавливаем новый текст для label1
+    gtk_label_set_text(GTK_LABEL(label1), "НАЖАЛ НА 22 КНОПКУ!!!");
+}
+
+// Обработчик события для выбора строки таблицы
+void on_row_activated_1(GtkTreeView *treeview, gpointer user_data) {
+    GtkTreeSelection *selection = gtk_tree_view_get_selection(treeview);
+    GtkTreeModel *model;
+    GtkTreeIter iter;
+
+    // Получение выбранной строки
+    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+        // Получение значения из первого столбца выбранной строки
+        gchar *filename;
+        gtk_tree_model_get(model, &iter, 0, &filename, -1);
+
+        // Создание нового окна
+        GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+        gtk_window_set_title(GTK_WINDOW(window), "Содержимое файла");
+        gtk_window_set_default_size(GTK_WINDOW(window), 400, 300);
+
+        // Создание таблицы в новом окне
+        GtkWidget *table = gtk_grid_new();
+        gtk_container_add(GTK_CONTAINER(window), table);
+
+        // Чтение содержимого файла
+        std::ifstream file(filename);
+        std::string fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+        // Создание многострочного текстового виджета для отображения содержимого файла
+        GtkWidget *textview = gtk_text_view_new();
+        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
+        gtk_text_buffer_set_text(buffer, fileContent.c_str(), -1);
+        gtk_grid_attach(GTK_GRID(table), textview, 0, 0, 1, 1);
+
+        // Отображение нового окна
+        gtk_widget_show_all(window);
+
+        g_free(filename);
+    }
+}
+
 //--------------------------------------//
 int main (int argc, char *argv[]) {
 
@@ -272,10 +331,8 @@ int main (int argc, char *argv[]) {
 
         // Получение пути к исполняемому файлу
         std::string executablePath = getExecutablePath();
-
         // Получение директории из пути к исполняемому файлу
         std::string executableDirectory = getDirectoryFromPath(executablePath);
-
         // Формирование пути к файлу glade.glade (абсолютный или относительный относительно исполняемого файла)
         std::string gladeFilePath = executableDirectory + "glade.glade";
 
@@ -293,44 +350,78 @@ int main (int argc, char *argv[]) {
         button2 = GTK_WIDGET(gtk_builder_get_object(builder, "button2"));
         button3 = GTK_WIDGET(gtk_builder_get_object(builder, "button3"));
 
-        view1 = GTK_WIDGET(gtk_builder_get_object(builder, "view1")); // TODO начать отсюда
+        // Создание модели данных
         liststore1 = GTK_LIST_STORE(gtk_builder_get_object(builder, "liststore1"));
         tv1 = GTK_TREE_VIEW(gtk_builder_get_object(builder, "tv1"));
 
         cx1 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx1"));
-//        cx2 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx2"));
-//        cx3 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx3"));
-//        cx4 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx4"));
-//        cx5 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx5"));
+        cx2 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx2"));
+        cx3 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx3"));
+        cx4 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx4"));
+        cx5 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx5"));
+//        // Установка фиксированной ширины для третьего столбца
+//        gtk_tree_view_column_set_fixed_width(cx5, 300);
+
+        // Добавление столбцов к таблице
+        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx1);
+        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx2);
+        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx3);
+        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx4);
+        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx5);
 
         cr1 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr1"));
-//        cr2 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr2"));
-//        cr3 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr3"));
-//        cr4 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr4"));
-//        cr5 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr5"));
+        cr2 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr2"));
+        cr3 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr3"));
+        cr4 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr4"));
+        cr5 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr5"));
 
-        selection = GTK_TREE_SELECTION(gtk_builder_get_object(builder, "selection"));
+        // Получение размера окна
+//        GtkAllocation allocation;
+//        GtkWidget *tv1 = GTK_WIDGET(gtk_builder_get_object(GTK_BUILDER(builder), "tv1"));
+//        gtk_widget_get_allocation(tv1, &allocation);
+//        int height = allocation.height;
 
-// TODO закоментил временно, потому что не устанавливается текст, подумать над этим
-//        gtk_tree_view_column_add_attribute(cx1, cr1, data.name_object.c_str(), 0);
-//        gtk_tree_view_column_add_attribute(cx2, cr2, "text2", 1);
-//        gtk_tree_view_column_add_attribute(cx3, cr3, "text2", 2);
-//        gtk_tree_view_column_add_attribute(cx4, cr4, "text3", 3);
-//        gtk_tree_view_column_add_attribute(cx5, cr5, "text4", 4);
-
+        // Вычисление количества строк, достаточного для заполнения окна
+//        int row_height = 0;
+//        GtkTreeModel *model = GTK_TREE_MODEL(liststore1);
 //        GtkTreeIter iter;  // iterators
+//        int row_count = 0;
 //
-//        gtk_list_store_append(liststore1, &iter);
-//        gtk_list_store_set(liststore1, &iter, 0, data.name_object.c_str(), -1);
-//        gtk_list_store_set(liststore1, &iter, 1, start_reg, -1);
-//        gtk_list_store_set(liststore1, &iter, 2, end_reg, -1);
-//        gtk_list_store_set(liststore1, &iter, 3, schematic_connect.c_str(), -1);
-//        gtk_list_store_set(liststore1, &iter, 4, average_interval.c_str(), -1);
+//        while (gtk_tree_model_iter_next(model, &iter)) {
+//            GtkTreePath *path = gtk_tree_model_get_path(model, &iter);
+//            GtkTreeView *tv1 = GTK_TREE_VIEW(builder);
+//            GdkRectangle rect;
+//            if (gtk_tree_view_get_background_area(tv1, path, NULL, &rect)) {
+//                row_height = rect.height;
+//            }
+//            gtk_tree_path_free(path);
+//            row_count++;
+//        }
+//        int max_rows = height / row_height + 1;
+        GtkTreeIter iter;
+        // Добавление новых пустых строк в таблицу
+//        for (int i = 1; i < 5; i++) {
+//
+//            gtk_list_store_append(liststore1, &iter);
+//            gtk_list_store_set(liststore1, &iter, 0, "", -1);
+//        }
+
+        gtk_list_store_append(liststore1, &iter);
+        gtk_list_store_set(liststore1, &iter, 0, " ", -1);
+        gtk_list_store_set(liststore1, &iter, 1, " ", -1);
+        gtk_list_store_set(liststore1, &iter, 2, " ", -1);
+        gtk_list_store_set(liststore1, &iter, 3, " ", -1);
+        gtk_list_store_set(liststore1, &iter, 4, " ", -1);
 
         selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tv1));
+        // Установка режима выделения строк
+        gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+        // Подписка на сигнал "changed"
+        g_signal_connect(selection, "row_activated", G_CALLBACK(on_row_activated), NULL);
+
 
         // Подключение обработчиков событий
-        g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), window1);
+        g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), liststore1);
         g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), window1);
         g_signal_connect(button3, "clicked", G_CALLBACK(on_button3_clicked), window1);
 
