@@ -277,7 +277,7 @@ void on_window2_destroy(GtkWidget *widget, gpointer user_data) {
 }
 
 // Создайте функцию-обработчик для сигнала "row-activated"
-void on_row_activated() {
+void on_table_clicked() {
     // Устанавливаем новый текст для label1
     gtk_label_set_text(GTK_LABEL(label1), "НАЖАЛ НА 22 КНОПКУ!!!");
 }
@@ -417,7 +417,7 @@ int main (int argc, char *argv[]) {
         // Установка режима выделения строк
         gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
         // Подписка на сигнал "changed"
-        g_signal_connect(selection, "row_activated", G_CALLBACK(on_row_activated), NULL);
+//        g_signal_connect(selection, "row_activated", G_CALLBACK(on_row_activated), NULL);
 
 
         // Подключение обработчиков событий
@@ -427,6 +427,10 @@ int main (int argc, char *argv[]) {
 
         g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
         g_signal_connect(window2, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+
+        // Подключение обработчика события клика на таблицу
+        g_signal_connect(cr1, "row_selected", G_CALLBACK(on_table_clicked), NULL);
+
 
         gtk_builder_connect_signals(builder, NULL);
         gtk_widget_show_all(window1);
