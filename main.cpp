@@ -224,7 +224,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
 
             if (i == 0)
             {
-
+//              Наименование объекта
                 name_object = processedData[2];
 
 //              Старт испытания
@@ -241,7 +241,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
                 strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
                 std::string formattedTimeStart(buffer);
 
-                //Окончание испытания
+//              Окончание испытания
                 end_reg = processedData[1];
                 float numberend = std::stof(end_reg);  // Преобразуем строку в число типа float
                 // Создаем структуру tm с помощью значения UNIX времени
@@ -254,9 +254,24 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
                 char bufferend[80];
                 strftime(bufferend, sizeof(bufferend), "%Y-%m-%d %H:%M:%S", timeinfoend);
                 std::string formattedTimeEnd(bufferend);
-
+//              Схемы соединения
+//              схема проверки 1 = 1-ф 2-пр
+//              схема проверки 2 = 3-ф 3-пр
+//              схема проверки 3 = 3-ф 4-пр
                 schematic_connect = processedData[5];
-                average_interval = processedData[3];
+                int number = std::stoi(schematic_connect); // Преобразование строки в число
+                // Присваиваем соответствующую строку в зависимости от числа
+                switch (number) {
+                    case 1:
+                        schematic_connect = "1-ф 2-пр";
+                    case 2:
+                        schematic_connect = "3-ф 3-пр";
+                    case 3:
+                        schematic_connect = "3-ф 4-пр";
+                }
+
+//              Интервал усреднения
+                average_interval = processedData[3] + " мсек";
 
                 GtkListStore *liststore = GTK_LIST_STORE(user_data);
 
