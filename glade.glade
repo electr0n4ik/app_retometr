@@ -107,7 +107,7 @@
                         <property name="show-expanders">False</property>
                         <property name="enable-grid-lines">both</property>
                         <property name="enable-tree-lines">True</property>
-                        <signal name="row-activated" handler="row_activated" swapped="no"/>
+                        <signal name="select-all" handler="row_selected" swapped="no"/>
                         <child>
                           <object class="GtkTreeViewColumn" id="cx1">
                             <property name="title" translatable="yes">Название объекта</property>
