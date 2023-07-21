@@ -6,6 +6,7 @@
 #include <string>
 #include <regex>
 #include <filesystem>
+#include <ctime>
 #include "pugixml.hpp"
 
 GtkBuilder               *builder;
@@ -225,8 +226,35 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
             {
 
                 name_object = processedData[2];
+
+//              Старт испытания
                 start_reg = processedData[0];
+                float numberstart = std::stof(start_reg);  // Преобразуем строку в число типа float
+                // Создаем структуру tm с помощью значения UNIX времени
+                struct tm* timeinfo;
+                numberstart /= 1000;
+                // Преобразуем значение float в тип time_t
+                time_t timeValue = static_cast<time_t>(numberstart);
+                timeinfo = localtime(reinterpret_cast<const time_t *>(&timeValue));
+                // Преобразуем структуру tm в строку с помощью функции strftime
+                char buffer[80];
+                strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+                std::string formattedTimeStart(buffer);
+
+                //Окончание испытания
                 end_reg = processedData[1];
+                float numberend = std::stof(end_reg);  // Преобразуем строку в число типа float
+                // Создаем структуру tm с помощью значения UNIX времени
+                struct tm* timeinfoend;
+                numberend /= 1000;
+                // Преобразуем значение float в тип time_t
+                time_t timeValueend = static_cast<time_t>(numberend);
+                timeinfoend = localtime(reinterpret_cast<const time_t *>(&timeValueend));
+                // Преобразуем структуру tm в строку с помощью функции strftime
+                char bufferend[80];
+                strftime(bufferend, sizeof(bufferend), "%Y-%m-%d %H:%M:%S", timeinfoend);
+                std::string formattedTimeEnd(bufferend);
+
                 schematic_connect = processedData[5];
                 average_interval = processedData[3];
 
@@ -242,11 +270,11 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
                 GtkTreeIter iter;  // iterators
 
                 gtk_list_store_append(liststore1, &iter);
-                gtk_list_store_set(liststore1, &iter, 0, name_object.c_str(), -1);
-                gtk_list_store_set(liststore1, &iter, 1, start_reg.c_str(), -1);
-                gtk_list_store_set(liststore1, &iter, 2, end_reg.c_str(), -1);
-                gtk_list_store_set(liststore1, &iter, 3, schematic_connect.c_str(), -1);
-                gtk_list_store_set(liststore1, &iter, 4, average_interval.c_str(), -1);
+                gtk_list_store_set(liststore1, &iter, 0, name_object.c_str(), -1); // Название объекта
+                gtk_list_store_set(liststore1, &iter, 1, formattedTimeStart.c_str(), -1); // Начало регистрации
+                gtk_list_store_set(liststore1, &iter, 2, formattedTimeEnd.c_str(), -1); // Окончание регистрации
+                gtk_list_store_set(liststore1, &iter, 3, schematic_connect.c_str(), -1); // Схема соединения
+                gtk_list_store_set(liststore1, &iter, 4, average_interval.c_str(), -1); // Интервал усреднения
 
                 // Добавление новых пустых строк в таблицу
 //                for (int i = 1; i < 10; i++) {
