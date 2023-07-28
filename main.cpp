@@ -17,6 +17,7 @@ GtkWidget                *window2;
 GtkWidget                *fixed1;
 GtkWidget                *fixed2;
 
+
 //--------------------------------------//
 // Получаем тестовый label
 GtkWidget                *label1;
@@ -34,6 +35,7 @@ GtkWidget                *button6;
 // для вывода информации
 // о загруженных файлах ПКЭ
 GtkWidget                *view1;
+GtkWidget                *view2;
 GtkListStore             *liststore1;
 GtkTreeView              *tv1;
 GtkTreeViewColumn        *cx1;
@@ -50,6 +52,54 @@ GtkCellRenderer          *cr2;
 GtkCellRenderer          *cr3;
 GtkCellRenderer          *cr4;
 GtkCellRenderer          *cr5;
+
+void create_scrollable_table(GtkButton *button, gpointer user_data) {
+
+    GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window),
+                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    gtk_widget_set_size_request(scrolled_window, 500, 200); // Устанавливаем размер области
+    gtk_fixed_put(GTK_FIXED(fixed1), scrolled_window, 0, 300); // Устанавливаем положение области
+
+    // Создание модели списка
+    GtkListStore *liststore = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
+
+    // Добавление данных в модель
+    GtkTreeIter iter;
+    for (int i = 0; i < 100; i++) {
+        gtk_list_store_append(liststore, &iter);
+        gchar *value1 = g_strdup_printf("Тест1 - %d", i);
+        gchar *value2 = g_strdup_printf("Тест2 - %d", i);
+        gchar *value3 = g_strdup_printf("Тест3 - %d", i);
+        gtk_list_store_set(liststore, &iter, 0, value1, 1, value2, 2, value3, -1);
+        g_free(value1);
+        g_free(value2);
+        g_free(value3);
+    }
+
+    // Создание таблицы
+    GtkWidget *treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(liststore));
+
+    // Создание колонок таблицы
+    for (int i = 0; i < 3; i++) {
+        GtkWidget *column = reinterpret_cast<GtkWidget *>(gtk_tree_view_column_new());
+
+        gchar *title = g_strdup_printf("Тест%d", i + 1);
+        gtk_tree_view_column_set_title(GTK_TREE_VIEW_COLUMN(column), title);
+        g_free(title);
+
+        GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
+        gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(column), renderer, TRUE);
+        gtk_tree_view_column_add_attribute(GTK_TREE_VIEW_COLUMN(column), renderer, "text", i);
+
+        gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), reinterpret_cast<GtkTreeViewColumn *>(column));
+    }
+
+    // Установка таблицы в контейнер с прокруткой
+    gtk_container_add(GTK_CONTAINER(scrolled_window), treeview);
+
+    gtk_widget_show_all(window1);
+}
 
 // Функция для получения пути к исполняемому файлу
 std::string getExecutablePath() {
@@ -319,50 +369,6 @@ void on_window2_destroy(GtkWidget *widget, gpointer user_data) {
     g_object_unref(builder);
 }
 
-// Создайте функцию-обработчик для сигнала "row-activated"
-void on_table_clicked() {
-    // Устанавливаем новый текст для label1
-    gtk_label_set_text(GTK_LABEL(label1), "НАЖАЛ НА 22 КНОПКУ!!!");
-}
-
-// Обработчик события для выбора строки таблицы
-void on_row_activated_1(GtkTreeView *treeview, gpointer user_data) {
-    GtkTreeSelection *selection = gtk_tree_view_get_selection(treeview);
-    GtkTreeModel *model;
-    GtkTreeIter iter;
-
-    // Получение выбранной строки
-    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
-        // Получение значения из первого столбца выбранной строки
-        gchar *filename;
-        gtk_tree_model_get(model, &iter, 0, &filename, -1);
-
-        // Создание нового окна
-        GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-        gtk_window_set_title(GTK_WINDOW(window), "Содержимое файла");
-        gtk_window_set_default_size(GTK_WINDOW(window), 400, 300);
-
-        // Создание таблицы в новом окне
-        GtkWidget *table = gtk_grid_new();
-        gtk_container_add(GTK_CONTAINER(window), table);
-
-        // Чтение содержимого файла
-        std::ifstream file(filename);
-        std::string fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
-        // Создание многострочного текстового виджета для отображения содержимого файла
-        GtkWidget *textview = gtk_text_view_new();
-        GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
-        gtk_text_buffer_set_text(buffer, fileContent.c_str(), -1);
-        gtk_grid_attach(GTK_GRID(table), textview, 0, 0, 1, 1);
-
-        // Отображение нового окна
-        gtk_widget_show_all(window);
-
-        g_free(filename);
-    }
-}
-
 //--------------------------------------//
 int main (int argc, char *argv[]) {
 
@@ -379,8 +385,11 @@ int main (int argc, char *argv[]) {
         // Формирование пути к файлу glade.glade (абсолютный или относительный относительно исполняемого файла)
         std::string gladeFilePath = executableDirectory + "glade.glade";
 
+        std::cout << "\nтестовый вывод " << executableDirectory << "\n";
+        std::cout << std::endl; // Отладочный вывод
+
         // Загрузка интерфейса из файла glade.glade
-        GtkBuilder *builder = gtk_builder_new_from_file(gladeFilePath.c_str());
+        builder = gtk_builder_new_from_file(gladeFilePath.c_str());
 
         window1 = GTK_WIDGET(gtk_builder_get_object(builder, "window1"));
         gtk_window_set_title(GTK_WINDOW(window1), "РЕТОМЕТР-М3");
@@ -392,6 +401,8 @@ int main (int argc, char *argv[]) {
         button1 = GTK_WIDGET(gtk_builder_get_object(builder, "button1"));
         button2 = GTK_WIDGET(gtk_builder_get_object(builder, "button2"));
         button3 = GTK_WIDGET(gtk_builder_get_object(builder, "button3"));
+
+//        scrolledwindow1 = GTK_WIDGET(gtk_builder_get_object(builder, "scrolledwindow1"));
 
         // Создание модели данных
         liststore1 = GTK_LIST_STORE(gtk_builder_get_object(builder, "liststore1"));
@@ -456,9 +467,9 @@ int main (int argc, char *argv[]) {
         gtk_list_store_set(liststore1, &iter, 3, " ", -1);
         gtk_list_store_set(liststore1, &iter, 4, " ", -1);
 
-        selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tv1));
-        // Установка режима выделения строк
-        gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+//        selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tv1));
+//        // Установка режима выделения строк
+//        gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
         // Подписка на сигнал "changed"
 //        g_signal_connect(selection, "row_activated", G_CALLBACK(on_row_activated), NULL);
 
@@ -466,16 +477,12 @@ int main (int argc, char *argv[]) {
         // Подключение обработчиков событий
         g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), liststore1);
         g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), window1);
-        g_signal_connect(button3, "clicked", G_CALLBACK(on_button3_clicked), window1);
+        g_signal_connect(button3, "clicked", G_CALLBACK(create_scrollable_table), window1);
 
         g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
         g_signal_connect(window2, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
-        // Подключение обработчика события клика на таблицу
-        g_signal_connect(cr1, "row_selected", G_CALLBACK(on_table_clicked), NULL);
-
-
-        gtk_builder_connect_signals(builder, NULL);
+        gtk_builder_connect_signals(builder, nullptr);
         gtk_widget_show_all(window1);
         gtk_main();
         g_object_unref(builder);
