@@ -14,6 +14,7 @@ GtkBuilder               *builder;
 // Создание некоторых объектов главного окна
 GtkWidget                *window1;
 GtkWidget                *window2;
+GtkWidget                *main_paned1;
 GtkWidget                *fixed1;
 GtkWidget                *fixed2;
 
@@ -55,11 +56,16 @@ GtkCellRenderer          *cr5;
 
 void create_scrollable_table(GtkButton *button, gpointer user_data) {
 
-    GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
-    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window),
+    main_paned1 = GTK_WIDGET(gtk_builder_get_object(builder, "main_paned1"));
+    GtkWidget *upper_paned = gtk_paned_get_child1(GTK_PANED(main_paned1));
+    GtkWidget *lower_paned = gtk_paned_get_child2(GTK_PANED(main_paned1));
+    // Задаем фиксированную позицию для верхней части
+    gtk_paned_set_position(GTK_PANED(main_paned1), 200); // Установите здесь желаемую фиксированную высоту
+
+    GtkWidget *scrolled2 = gtk_scrolled_window_new(NULL, NULL);
+
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled2),
                                    GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-    gtk_widget_set_size_request(scrolled_window, 500, 200); // Устанавливаем размер области
-    gtk_fixed_put(GTK_FIXED(fixed1), scrolled_window, 0, 300); // Устанавливаем положение области
 
     // Создание модели списка
     GtkListStore *liststore = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
@@ -96,7 +102,10 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
     }
 
     // Установка таблицы в контейнер с прокруткой
-    gtk_container_add(GTK_CONTAINER(scrolled_window), treeview);
+    gtk_container_add(GTK_CONTAINER(scrolled2), treeview);
+
+    // Добавление GtkScrolledWindow в нижний GtkPaned
+    gtk_paned_pack2(GTK_PANED(main_paned1), scrolled2, TRUE, TRUE);
 
     gtk_widget_show_all(window1);
 }
@@ -369,6 +378,12 @@ void on_window2_destroy(GtkWidget *widget, gpointer user_data) {
     g_object_unref(builder);
 }
 
+// Обработчик события нажатия кнопкой мыши
+static void on_cell_renderer_clicked() {
+    std::cout << "\nПРИВЕТ " << 12381234278978923 << "\n";
+    std::cout << std::endl; // Отладочный вывод
+}
+
 //--------------------------------------//
 int main (int argc, char *argv[]) {
 
@@ -385,9 +400,6 @@ int main (int argc, char *argv[]) {
         // Формирование пути к файлу glade.glade (абсолютный или относительный относительно исполняемого файла)
         std::string gladeFilePath = executableDirectory + "glade.glade";
 
-        std::cout << "\nтестовый вывод " << executableDirectory << "\n";
-        std::cout << std::endl; // Отладочный вывод
-
         // Загрузка интерфейса из файла glade.glade
         builder = gtk_builder_new_from_file(gladeFilePath.c_str());
 
@@ -401,8 +413,6 @@ int main (int argc, char *argv[]) {
         button1 = GTK_WIDGET(gtk_builder_get_object(builder, "button1"));
         button2 = GTK_WIDGET(gtk_builder_get_object(builder, "button2"));
         button3 = GTK_WIDGET(gtk_builder_get_object(builder, "button3"));
-
-//        scrolledwindow1 = GTK_WIDGET(gtk_builder_get_object(builder, "scrolledwindow1"));
 
         // Создание модели данных
         liststore1 = GTK_LIST_STORE(gtk_builder_get_object(builder, "liststore1"));
@@ -478,6 +488,11 @@ int main (int argc, char *argv[]) {
         g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), liststore1);
         g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), window1);
         g_signal_connect(button3, "clicked", G_CALLBACK(create_scrollable_table), window1);
+
+        // Установка сигнала "clicked" для cr1
+        g_signal_connect(cr1, "edited", G_CALLBACK(on_cell_renderer_clicked), NULL);
+
+
 
         g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
         g_signal_connect(window2, "destroy", G_CALLBACK(gtk_main_quit), NULL);

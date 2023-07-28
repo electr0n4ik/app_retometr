@@ -12,6 +12,7 @@ add_definitions(${GTK3_CFLAGS_OTHER} ${PUGIXML_CFLAGS_OTHER} ${GLIB_INCLUDE_DIRS
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "-rdynamic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
 
 add_executable(app_retometr main.cpp)
 
