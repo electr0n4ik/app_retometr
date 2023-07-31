@@ -2,6 +2,8 @@
 #include <glib.h>
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
+#include <vector>
 #include <fstream>
 #include <string>
 #include <regex>
@@ -436,10 +438,10 @@ std::vector<std::string> extractDataFromXML(const std::string& xmlText) {
     return extractedData;
 }
 // Обработчик события нажатия кнопкой мыши
-static void on_cell_renderer_clicked() {
-    std::cout << "\nПРИВЕТ " << 12381234278978923 << "\n";
-    std::cout << std::endl; // Отладочный вывод
-}
+//static void on_cell_renderer_clicked() {
+//    std::cout << "\nПРИВЕТ " << 12381234278978923 << "\n";
+//    std::cout << std::endl; // Отладочный вывод
+//}
 //--------------------------------------//
 //обработчик события для кнопки button1
 void on_button1_clicked(GtkButton *button, gpointer user_data)
@@ -471,7 +473,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
 
     res = gtk_dialog_run(GTK_DIALOG(dialog1));
 
-    // Если пользователь выбрал папку, то вывод в label
+    // Если пользователь выбрал папку
     if (res == GTK_RESPONSE_ACCEPT)
     {
         GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
@@ -492,7 +494,23 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
 
             std::ostringstream ss;
             doc.print(ss);
+            // std::string str = ss.str(); // Содержимое файла - несколько однообразных строк
+
+            std::vector<std::string> strings;
+            std::string temp;
+
+// Получение содержимого из std::ostringstream
             std::string str = ss.str();
+
+// Использование std::istringstream для дальнейшей обработки строк
+            std::istringstream iss(str);
+            while (std::getline(iss, temp, '>')) // Разделение строк по символу '>' TODO
+            {
+                strings.push_back(temp);
+                std::cout << "\nПРИВЕТ " << temp << "\n";
+                std::cout << std::endl; // Отладочный вывод
+            }
+
             std::vector<std::string> processedData = extractDataFromXML(str);
 //            std::cout << "\nПРИВЕТ " << str << "\n"; // ВЫВОД СОДЕРЖИМОГО КАЖДОГО ФАЙЛА
 //            std::cout << std::endl; // Отладочный вывод
