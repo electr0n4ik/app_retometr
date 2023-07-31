@@ -54,6 +54,12 @@ GtkCellRenderer          *cr3;
 GtkCellRenderer          *cr4;
 GtkCellRenderer          *cr5;
 
+void on_renderer_clicked()
+{
+    // Устанавливаем новый текст для label1
+    gtk_label_set_text(GTK_LABEL(label1), "НАЖАЛ НА 2 КНОПКУ!!!");
+}
+
 void create_scrollable_table(GtkButton *button, gpointer user_data) {
 
     main_paned1 = GTK_WIDGET(gtk_builder_get_object(builder, "main_paned1"));
@@ -85,7 +91,7 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
 
     // Создание таблицы
     GtkWidget *treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(liststore));
-
+    GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
     // Создание колонок таблицы
     for (int i = 0; i < 3; i++) {
         GtkWidget *column = reinterpret_cast<GtkWidget *>(gtk_tree_view_column_new());
@@ -94,7 +100,6 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
         gtk_tree_view_column_set_title(GTK_TREE_VIEW_COLUMN(column), title);
         g_free(title);
 
-        GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
         gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(column), renderer, TRUE);
         gtk_tree_view_column_add_attribute(GTK_TREE_VIEW_COLUMN(column), renderer, "text", i);
 
@@ -108,6 +113,8 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
     gtk_paned_pack2(GTK_PANED(main_paned1), scrolled2, TRUE, TRUE);
 
     gtk_widget_show_all(window1);
+
+
 }
 
 // Функция для получения пути к исполняемому файлу
@@ -228,7 +235,11 @@ std::vector<std::string> extractDataFromXML(const std::string& xmlText) {
 
     return extractedData;
 }
-
+// Обработчик события нажатия кнопкой мыши
+static void on_cell_renderer_clicked() {
+    std::cout << "\nПРИВЕТ " << 12381234278978923 << "\n";
+    std::cout << std::endl; // Отладочный вывод
+}
 //--------------------------------------//
 //обработчик события для кнопки button1
 void on_button1_clicked(GtkButton *button, gpointer user_data)
@@ -356,6 +367,9 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
 //                    gtk_list_store_append(liststore1, &iter);
 //                    gtk_list_store_set(liststore1, &iter, 0, "", -1);
 //                }
+                // Установка сигнала "clicked" для cr1
+                g_signal_connect(tv1, "row-activated", G_CALLBACK(create_scrollable_table), NULL);
+
 
                 std::cout << "\nНазвание объекта: " << name_object << "\nНачало регистрации:    " << start_reg;
                 std::cout << "\nОкончание регистрации: " << end_reg << "\nСхема соединения: " << schematic_connect;
@@ -378,11 +392,7 @@ void on_window2_destroy(GtkWidget *widget, gpointer user_data) {
     g_object_unref(builder);
 }
 
-// Обработчик события нажатия кнопкой мыши
-static void on_cell_renderer_clicked() {
-    std::cout << "\nПРИВЕТ " << 12381234278978923 << "\n";
-    std::cout << std::endl; // Отладочный вывод
-}
+
 
 //--------------------------------------//
 int main (int argc, char *argv[]) {
@@ -470,12 +480,12 @@ int main (int argc, char *argv[]) {
 //            gtk_list_store_set(liststore1, &iter, 0, "", -1);
 //        }
 
-        gtk_list_store_append(liststore1, &iter);
-        gtk_list_store_set(liststore1, &iter, 0, " ", -1);
-        gtk_list_store_set(liststore1, &iter, 1, " ", -1);
-        gtk_list_store_set(liststore1, &iter, 2, " ", -1);
-        gtk_list_store_set(liststore1, &iter, 3, " ", -1);
-        gtk_list_store_set(liststore1, &iter, 4, " ", -1);
+//        gtk_list_store_append(liststore1, &iter);
+//        gtk_list_store_set(liststore1, &iter, 0, " ", -1);
+//        gtk_list_store_set(liststore1, &iter, 1, " ", -1);
+//        gtk_list_store_set(liststore1, &iter, 2, " ", -1);
+//        gtk_list_store_set(liststore1, &iter, 3, " ", -1);
+//        gtk_list_store_set(liststore1, &iter, 4, " ", -1);
 
 //        selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tv1));
 //        // Установка режима выделения строк
@@ -489,8 +499,7 @@ int main (int argc, char *argv[]) {
         g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), window1);
         g_signal_connect(button3, "clicked", G_CALLBACK(create_scrollable_table), window1);
 
-        // Установка сигнала "clicked" для cr1
-        g_signal_connect(cr1, "edited", G_CALLBACK(on_cell_renderer_clicked), NULL);
+
 
 
 
