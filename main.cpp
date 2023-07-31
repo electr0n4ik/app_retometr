@@ -192,12 +192,47 @@ void on_button3_clicked(GtkButton *button, gpointer user_data)
 }
 
 std::vector<std::string> extractDataFromXML(const std::string& xmlText) {
+    // Вытаскиваем данные из файла - 39 переменных
     std::regex timeStartRegex("TimeStart=\"(\\d+)\"");
     std::regex timeStopRegex("TimeStop=\"(\\d+)\"");
     std::regex nameObjectRegex("nameObject=\"([^\"]+)\"");
     std::regex averagingIntervalTimeRegex("averaging_interval_time=\"(\\d+)\"");
     std::regex averagingIntervalRegex("averaging_interval=\"(\\d+)\"");
     std::regex activeCxemaRegex("active_cxema=\"(\\d+)\"");
+    //
+    std::regex pkeCxemaRegex("pke_cxema=\"(\\d+)\"");
+    std::regex TimeTekRegex("TimeTek=\"(\\d+)\"");
+    std::regex UABRegex("UAB=\"(\\d+)\"");
+    std::regex UBCRegex("UBC=\"(\\d+)\"");
+    std::regex UCARegex("UCA=\"(\\d+)\"");
+    std::regex IARegex("IA=\"(\\d+)\"");
+    std::regex IBRegex("IB=\"(\\d+)\"");
+    std::regex ICRegex("IC=\"(\\d+)\"");
+    std::regex UARegex("UA=\"(\\d+)\"");
+    std::regex UBRegex("UB=\"(\\d+)\"");
+    std::regex UCRegex("UC=\"(\\d+)\"");
+    std::regex PORegex("PO=\"(\\d+)\"");
+    std::regex PPRegex("PP=\"(\\d+)\"");
+    std::regex PHRegex("PH=\"(\\d+)\"");
+    std::regex QORegex("QO=\"(\\d+)\"");
+    std::regex QPRegex("QP=\"(\\d+)\"");
+    std::regex QHRegex("QH=\"(\\d+)\"");
+    std::regex SORegex("SO=\"(\\d+)\"");
+    std::regex SPRegex("SP=\"(\\d+)\"");
+    std::regex SHRegex("SH=\"(\\d+)\"");
+    std::regex UORegex("UO=\"(\\d+)\"");
+    std::regex UPRegex("UP=\"(\\d+)\"");
+    std::regex UHRegex("UH=\"(\\d+)\"");
+    std::regex IORegex("IO=\"(\\d+)\"");
+    std::regex IPRegex("IP=\"(\\d+)\"");
+    std::regex IHRegex("IH=\"(\\d+)\"");
+    std::regex KORegex("KO=\"(\\d+)\"");
+    std::regex KHRegex("KH=\"(\\d+)\"");
+    std::regex FreqRegex("Freq=\"(\\d+)\"");
+    std::regex sigmaUyRegex("sigmaUy=\"(\\d+)\"");
+    std::regex sigmaUyARegex("sigmaUyA=\"(\\d+)\"");
+    std::regex sigmaUyBRegex("sigmaUyB=\"(\\d+)\"");
+    std::regex sigmaUyCRegex("sigmaUyC=\"(\\d+)\"");
 
     std::vector<std::string> extractedData;
 
@@ -233,6 +268,171 @@ std::vector<std::string> extractDataFromXML(const std::string& xmlText) {
         extractedData.push_back(match[1].str());
     }
 
+    // Поиск значения pke_cxema
+    if (std::regex_search(xmlText, match, pkeCxemaRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск кода времени TimeTek
+    if (std::regex_search(xmlText, match, TimeTekRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения UAB
+    if (std::regex_search(xmlText, match, UABRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения UBC
+    if (std::regex_search(xmlText, match, UBCRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения UCA
+    if (std::regex_search(xmlText, match, UCARegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения IA
+    if (std::regex_search(xmlText, match, IARegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения IB
+    if (std::regex_search(xmlText, match, IBRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения IC
+    if (std::regex_search(xmlText, match, ICRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения UA
+    if (std::regex_search(xmlText, match, UARegex)) {
+        extractedData.push_back(match[1].str());
+    }////
+
+    // Поиск значения UB
+    if (std::regex_search(xmlText, match, UBRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения UC
+    if (std::regex_search(xmlText, match, UCRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения PO
+    if (std::regex_search(xmlText, match, PORegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения PP
+    if (std::regex_search(xmlText, match, PPRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения PH
+    if (std::regex_search(xmlText, match, PHRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения QO
+    if (std::regex_search(xmlText, match, QORegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения QP
+    if (std::regex_search(xmlText, match, QPRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения QH
+    if (std::regex_search(xmlText, match, QHRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения SO
+    if (std::regex_search(xmlText, match, SORegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения SP
+    if (std::regex_search(xmlText, match, SPRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения SH
+    if (std::regex_search(xmlText, match, SHRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения UO
+    if (std::regex_search(xmlText, match, UORegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения UP
+    if (std::regex_search(xmlText, match, UPRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения UH
+    if (std::regex_search(xmlText, match, UHRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения IO
+    if (std::regex_search(xmlText, match, IORegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения IP
+    if (std::regex_search(xmlText, match, IPRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения IH
+    if (std::regex_search(xmlText, match, IHRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения KO
+    if (std::regex_search(xmlText, match, KORegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения KH
+    if (std::regex_search(xmlText, match, KHRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения Freq
+    if (std::regex_search(xmlText, match, FreqRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения sigmaUy
+    if (std::regex_search(xmlText, match, sigmaUyRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения sigmaUyA
+    if (std::regex_search(xmlText, match, sigmaUyARegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения sigmaUyB
+    if (std::regex_search(xmlText, match, sigmaUyBRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
+    // Поиск значения sigmaUyC
+    if (std::regex_search(xmlText, match, sigmaUyCRegex)) {
+        extractedData.push_back(match[1].str());
+    }
+
     return extractedData;
 }
 // Обработчик события нажатия кнопкой мыши
@@ -244,7 +444,7 @@ static void on_cell_renderer_clicked() {
 //обработчик события для кнопки button1
 void on_button1_clicked(GtkButton *button, gpointer user_data)
 {
-    GtkBuilder    *builder = GTK_BUILDER(user_data);
+//    GtkBuilder    *builder = GTK_BUILDER(user_data);
     GtkWidget     *dialog1;
 
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
@@ -257,6 +457,8 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
     std::string schematic_connect;
     std::string average_interval;
     std::string end_reg;
+
+//    std::string *;
 
     dialog1 = gtk_file_chooser_dialog_new("Выбрать папку",
                                           GTK_WINDOW(user_data),
@@ -274,10 +476,11 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
     {
         GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
         gchar *folder_path = gtk_file_chooser_get_filename(chooser);
+//        std::cout << "\nПРИВЕТ " << folder_path << "\n";
+//        std::cout << std::endl; // Отладочный вывод
 
         for (const auto& entry : std::filesystem::directory_iterator(folder_path))
         {
-
             // проход по всем файлам в папке
             std::string file_path = entry.path().string();
             pugi::xml_document doc;
@@ -291,7 +494,8 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
             doc.print(ss);
             std::string str = ss.str();
             std::vector<std::string> processedData = extractDataFromXML(str);
-
+//            std::cout << "\nПРИВЕТ " << str << "\n"; // ВЫВОД СОДЕРЖИМОГО КАЖДОГО ФАЙЛА
+//            std::cout << std::endl; // Отладочный вывод
             if (i == 0)
             {
 //              Наименование объекта
@@ -380,6 +584,8 @@ void on_button1_clicked(GtkButton *button, gpointer user_data)
             i += 1;
         }
         g_free(folder_path);
+
+
     }
     gtk_widget_destroy(dialog1);
 }
