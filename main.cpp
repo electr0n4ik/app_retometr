@@ -12,6 +12,15 @@
 #include <ctime>
 #include "pugixml.hpp"
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#elif __linux__
+#include <unistd.h>
+#endif
+
 
 GtkBuilder *builder;
 //--------------------------------------//
@@ -75,6 +84,7 @@ GtkListStore *liststoreResult = gtk_list_store_new(33, G_TYPE_STRING, G_TYPE_STR
 
 gchar *folder_path;
 
+
 // Функция для экспорта данных из GtkListStore в файл Excel
 void on_button2_clicked(GtkButton *button, gpointer user_data) {
 
@@ -111,37 +121,35 @@ void on_button2_clicked(GtkButton *button, gpointer user_data) {
         for (int col = 0; col < num_columns; col++) {
             GValue value = G_VALUE_INIT;
             gtk_tree_model_get_value(model, &iter, col, &value);
-            const gchar *str_value = g_value_get_string(&value);
+            const gchar* str_value = g_value_get_string(&value);
 
-            gint value_width = sizeof(str_value);
+            worksheet_write_string(worksheet, row + 1, col, str_value, NULL);
+
+            int value_width = g_utf8_strlen(str_value, -1);
 
             if (value_width > max_column_width[col]) {
                 max_column_width[col] = value_width;
+                worksheet_set_column(worksheet, col, col, value_width + 3, NULL);
             }
 
-            worksheet_write_string(worksheet, row + 1, col, str_value, NULL);
             g_value_unset(&value);
-
         }
-    }
-
-
-
-
-
-
-
-
-
-// Устанавливаем ширину каждого столбца равной максимальной длине плюс некоторый отступ (например, 5 символов)
-    for (int col = 0; col < num_columns; col++) {
-        worksheet_set_column(worksheet, col, col, max_column_width[col] + 5, NULL);
     }
 
     // Закрываем файл Excel и освобождаем ресурсы
     if (workbook_close(workbook) != LXW_NO_ERROR) {
         g_printerr("Ошибка при сохранении файла Excel.\n");
     }
+
+    #ifdef _WIN32
+        // Для Windows используем команду "start" для открытия файла через ассоциированное приложение
+        ShellExecuteA(NULL, "open", folder_path, NULL, NULL, SW_SHOWNORMAL); //"output.xlsx"
+    #elif __linux__
+        // Для Linux используем команду "xdg-open" для открытия файла через ассоциированное приложение
+        if (fork() == 0) {
+            execlp("xdg-open", "xdg-open", "output.xlsx", NULL);
+        }
+    #endif
 }
 
 void on_renderer_clicked() {
@@ -267,8 +275,6 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
     std::string averagingInterval;
     std::string activeCxema;
 
-//    std::string *;
-
     dialog1 = gtk_file_chooser_dialog_new("Выбрать папку",
                                           GTK_WINDOW(user_data),
                                           action,
@@ -289,7 +295,6 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
         GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
         folder_path = gtk_file_chooser_get_filename(chooser);
 
-//        bool columnsCreated = false;
         int numColumns = 33; // Количество столбцов
 
         // Создание таблицы
@@ -297,6 +302,10 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
         renderer = gtk_cell_renderer_text_new();
         gtk_list_store_append(liststoreResult, &iterResult);
         std::vector<const char *> values(numColumns);
+
+        // Устанавливаем модель и режим автоматического сокрытия пустых строк
+//        gtk_tree_view_set_model(GTK_TREE_VIEW(treeview), GTK_TREE_MODEL(liststoreResult));
+//        gtk_list_store_set_value(GTK_LIST_STORE(liststoreResult), GTK_TREE_MODEL_SHOW_EMPTY);
 
         // Вместо создания отдельных переменных для каждой колонки, можно использовать массив указателей на GtkWidget:
         GtkWidget *columns[numColumns];
