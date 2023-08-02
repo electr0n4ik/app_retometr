@@ -60,39 +60,6 @@ GtkCellRenderer *cr5;
 GtkWidget *treeview;
 GtkCellRenderer *renderer;
 GtkTreeIter iterResult;
-GtkWidget *column1;
-GtkWidget *column2;
-GtkWidget *column3;
-GtkWidget *column4;
-GtkWidget *column5;
-GtkWidget *column6;
-GtkWidget *column7;
-GtkWidget *column8;
-GtkWidget *column9;
-GtkWidget *column10;
-GtkWidget *column11;
-GtkWidget *column12;
-GtkWidget *column13;
-GtkWidget *column14;
-GtkWidget *column15;
-GtkWidget *column16;
-GtkWidget *column17;
-GtkWidget *column18;
-GtkWidget *column19;
-GtkWidget *column20;
-GtkWidget *column21;
-GtkWidget *column22;
-GtkWidget *column23;
-GtkWidget *column24;
-GtkWidget *column25;
-GtkWidget *column26;
-GtkWidget *column27;
-GtkWidget *column28;
-GtkWidget *column29;
-GtkWidget *column30;
-GtkWidget *column31;
-GtkWidget *column32;
-GtkWidget *column33;
 
 gchar *folder_path;
 
@@ -283,7 +250,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
         folder_path = gtk_file_chooser_get_filename(chooser);
         GtkListStore *liststore = gtk_list_store_new(33, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
 
-        bool columnsCreated = false;
+//        bool columnsCreated = false;
         int numColumns = 33; // Количество столбцов
         // Создание таблицы
         treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(liststore));
@@ -296,11 +263,24 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
 
         gchar* titles[] = {
                 "Время", "Uab, B", "Ubc, B", "Uca, B", "Ia, A", "Ib, A", "Ic, A",
-                "Время", "Время", "Время", "Время", "Время", "Время", "Время",
-                "Время", "Время", "Время", "Время", "Время", "Время", "Время",
-                "Время", "Время", "Время", "Время", "Время", "Время", "Время",
-                "Время", "Время", "Время", "Время", "Колонка 33"
-        };
+                "Ua, B", "Ub, B", "Uc, B", "Pп, Вт", "Pо, Вт", "Pн, Вт", "Qп, Вар",
+                "Qо, Вар", "Qн, Вар", "Sп, ВА", "Sо, ВА", "Sн, ВА", "Uп, В", "Uо, В",
+                "Uн, В", "Iп, А", "Iо, А", "Iн, А", "Kо", "Kн", "△f, Гц",
+                "△Uy, %", "△UyA, %", "△UyB, %", "△UyC, %"
+        }; // TODO проверить столбцы
+        for (int i = 0; i < numColumns; ++i) {
+//            if (!columnsCreated) {
+            columns[i] = reinterpret_cast<GtkWidget*>(gtk_tree_view_column_new());
+            gchar* title = g_strdup_printf("%s", titles[i]);
+            gtk_tree_view_column_set_title(GTK_TREE_VIEW_COLUMN(columns[i]), title);
+            g_free(title);
+
+//            }
+            gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(columns[i]), renderer, TRUE);
+            gtk_tree_view_column_add_attribute(GTK_TREE_VIEW_COLUMN(columns[i]), renderer, "text", i);
+
+            gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), reinterpret_cast<GtkTreeViewColumn*>(columns[i]));
+        }
 
         for (const auto &entry: std::filesystem::directory_iterator(folder_path)) {
             // проход по всем файлам в папке
@@ -340,67 +320,67 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
                 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
                 // здесь надо реализовать заполнение одной строки
+                // Добавляем новую строку
+                gtk_list_store_append(liststore, &iterResult);
 
-                for (int i = 0; i < numColumns; ++i) {
+                for (int i = 1; i < numColumns; ++i) {
                     values[i] = g_strdup_printf("%s", resultAttrInBlock[i].c_str());
                 }
+
+                //TimeTek
+                std::string time_tek = values[1];
+                float numberstart = std::stof(time_tek);  // Преобразуем строку в число типа float
+                // Создаем структуру tm с помощью значения UNIX времени
+                struct tm *timeket_tm;
+                numberstart /= 1000;
+                // Преобразуем значение float в тип time_t
+                time_t timeValue = static_cast<time_t>(numberstart);
+                timeket_tm = localtime(reinterpret_cast<const time_t *>(&timeValue));
+                // Преобразуем структуру tm в строку с помощью функции strftime
+                char buffer[80];
+                strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeket_tm);
+                const char *formattedTek(buffer);
                 gtk_list_store_set(liststore, &iterResult,
-                                   0, values[0],
-                                   1, values[1],
-                                   2, values[2],
-                                   3, values[3],
-                                   4, values[4],
-                                   5, values[5],
-                                   6, values[6],
-                                   7, values[7],
-                                   8, values[8],
-                                   9, values[9],
-                                   10, values[10],
-                                   11, values[11],
-                                   12, values[12],
-                                   13, values[13],
-                                   14, values[14],
-                                   15, values[15],
-                                   16, values[16],
-                                   17, values[17],
-                                   18, values[18],
-                                   19, values[19],
-                                   20, values[20],
-                                   21, values[21],
-                                   22, values[22],
-                                   23, values[23],
-                                   24, values[24],
-                                   25, values[25],
-                                   26, values[26],
-                                   27, values[27],
-                                   28, values[28],
-                                   29, values[29],
-                                   30, values[30],
-                                   31, values[31],
-                                   32, values[32],
+                                   0, formattedTek,
+                                   1, values[2],
+                                   2, values[3],
+                                   3, values[4],
+                                   4, values[5],
+                                   5, values[6],
+                                   6, values[7],
+                                   7, values[8],
+                                   8, values[9],
+                                   9, values[10],
+                                   10, values[11],
+                                   11, values[12],
+                                   12, values[13],
+                                   13, values[14],
+                                   14, values[15],
+                                   15, values[16],
+                                   16, values[17],
+                                   17, values[18],
+                                   18, values[19],
+                                   19, values[20],
+                                   20, values[21],
+                                   21, values[22],
+                                   22, values[23],
+                                   23, values[24],
+                                   24, values[25],
+                                   25, values[26],
+                                   26, values[27],
+                                   27, values[28],
+                                   28, values[29],
+                                   29, values[30],
+                                   30, values[31],
+                                   31, values[32],
+//                                   32, values[33],
                                    -1); // Note: The last argument should be -1 to indicate the end of the list.
-
-                for (int i = 0; i < numColumns; ++i) {
-                    if (!columnsCreated) {
-                        columns[i] = reinterpret_cast<GtkWidget*>(gtk_tree_view_column_new());
-                        gchar* title = g_strdup_printf("%s", titles[i]);
-                        gtk_tree_view_column_set_title(GTK_TREE_VIEW_COLUMN(columns[i]), title);
-                        g_free(title);
-
-                    }
-                    gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(columns[i]), renderer, TRUE);
-                    gtk_tree_view_column_add_attribute(GTK_TREE_VIEW_COLUMN(columns[i]), renderer, "text", i);
-
-                    gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), reinterpret_cast<GtkTreeViewColumn*>(columns[i]));
-                }
-                columnsCreated = true; // Помечаем, что колонки были созданы
 
                 // здесь надо реализовать заполнение одной строки
 //-----------------------------------------------------------------------------------------------------------------------------------------
                 resultAttrInBlock.clear();
 
             }
-
 
             if (k == 0) {
 //              Наименование объекта
