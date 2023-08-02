@@ -6,8 +6,24 @@ pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 pkg_check_modules(PUGIXML REQUIRED pugixml)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 
-include_directories(${GTK3_INCLUDE_DIRS} ${PUGIXML_INCLUDE_DIRS} ${GLIB_INCLUDE_DIRS})
-link_directories(${GTK3_LIBRARY_DIRS} ${PUGIXML_LIBRARY_DIRS} ${GLIB_INCLUDE_DIRS})
+# Find xlsxwriter library
+find_library(XLSXWRITER_LIBRARIES xlsxwriter REQUIRED)
+
+
+include_directories(
+        ${GTK3_INCLUDE_DIRS}
+        ${PUGIXML_INCLUDE_DIRS}
+        ${GLIB_INCLUDE_DIRS}
+        include_directories (/usr/include/xlsxwriter)  # Путь к заголовочным файлам xlsxwriter на Ubuntu
+
+)
+link_directories(
+        ${GTK3_LIBRARY_DIRS}
+        ${PUGIXML_LIBRARY_DIRS}
+        ${GLIB_INCLUDE_DIRS}
+        link_directories (/usr/include/xlsxwriter)  # Путь к заголовочным файлам xlsxwriter на Ubuntu
+
+)
 add_definitions(${GTK3_CFLAGS_OTHER} ${PUGIXML_CFLAGS_OTHER} ${GLIB_INCLUDE_DIRS})
 
 set(CMAKE_CXX_STANDARD 23)
@@ -16,7 +32,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
 
 add_executable(app_retometr main.cpp)
 
-target_link_libraries(app_retometr ${GTK3_LIBRARIES} ${PUGIXML_LIBRARIES} ${GLIB_LIBRARIES} stdc++)
+target_link_libraries(app_retometr
+        ${GTK3_LIBRARIES}
+        ${PUGIXML_LIBRARIES}
+        ${GLIB_LIBRARIES}
+        ${XLSXWRITER_LIBRARIES} stdc++)
 
 add_custom_target(run_app_retometr
         COMMAND ${CMAKE_CURRENT_BINARY_DIR}/app_retometr
