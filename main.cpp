@@ -1,4 +1,6 @@
-#include <gtk-3.0/gtk/gtk.h>
+#include "pugixml.hpp"
+#include "gtk/gtk.h"
+#include "gdk/gdk.h"
 #include <xlsxwriter.h>
 #include <glib.h>
 #include <cstdlib>
@@ -10,10 +12,11 @@
 #include <regex>
 #include <filesystem>
 #include <ctime>
-#include "pugixml.hpp"
-
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
+#include <iomanip>
+#include <chrono>
+#include <ctime>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -96,27 +99,48 @@ gchar *folder_path;
 gboolean ASC_sort = FALSE; // Глобальная переменная для отслеживания текущего типа сортировки ASC в порядке возрастания
 gboolean DESC_sort = FALSE; // Глобальная переменная для отслеживания текущего типа сортировки DESC в порядке убывания
 
+// Функция сравнения для сортировки строк (G_TYPE_STRING) в GtkListStore
+static gint compare_func(GtkTreeModel *model, GtkTreeIter *iter1, GtkTreeIter *iter2, gpointer user_data) {
+    gint column = GPOINTER_TO_INT(user_data);
+
+    gchar *value1, *value2;
+    gtk_tree_model_get(model, iter1, column, &value1, -1);
+    gtk_tree_model_get(model, iter2, column, &value2, -1);
+
+    // Выполняем сравнение строк с помощью функции g_strcmp0 (без учета регистра)
+    gint result = g_strcmp0(value1, value2);
+
+    g_free(value1);
+    g_free(value2);
+
+    // Возвращаем результат сравнения
+    return result;
+}
+
 // Функция обработки сигнала клика по заголовку колонки
 void on_column_clicked(GtkTreeViewColumn *column, gpointer user_data) {
-    GtkTreeView *treeview = GTK_TREE_VIEW(user_data); //прописать нужный view
-    GtkTreeSortable *sortable = GTK_TREE_SORTABLE(gtk_tree_view_get_model(treeview));
 
-    GtkSortType current_sort_order = gtk_tree_sortable_get_sort_order(sortable);
+    GtkTreeView *treeview = GTK_TREE_VIEW(user_data); // прописать нужный view
+
+    gint current_sort_order = gtk_tree_view_column_get_sort_order(column);
+
+    GtkTreeSortable *sortable = GTK_TREE_SORTABLE(gtk_tree_view_get_model(treeview));
 
     if (current_sort_order == GTK_SORT_ASCENDING) {
         // Если сортировка по возрастанию, меняем на сортировку по убыванию
-        gtk_tree_sortable_set_sort_column_id(sortable, -1, GTK_SORT_DESCENDING);
+        gtk_tree_sortable_set_sort_func(sortable, gtk_tree_view_column_get_sort_column_id(column), compare_func, GINT_TO_POINTER(-1), NULL);
+        gtk_tree_sortable_set_sort_column_id(sortable, gtk_tree_view_column_get_sort_column_id(column), GTK_SORT_DESCENDING);
         DESC_sort = TRUE;
     } else if (current_sort_order == GTK_SORT_DESCENDING) {
         // Если сортировка по убыванию, отключаем сортировку
+        gtk_tree_sortable_set_sort_func(sortable, gtk_tree_view_column_get_sort_column_id(column), NULL, NULL, NULL);
         gtk_tree_sortable_set_sort_column_id(sortable, -1, GTK_SORT_ASCENDING);
         ASC_sort = FALSE;
         DESC_sort = FALSE;
-
     } else {
         // Если сортировка отключена, включаем сортировку по возрастанию
-        gint column_id = gtk_tree_view_column_get_sort_column_id(column);
-        gtk_tree_sortable_set_sort_column_id(sortable, column_id, GTK_SORT_ASCENDING);
+        gtk_tree_sortable_set_sort_func(sortable, gtk_tree_view_column_get_sort_column_id(column), compare_func, GINT_TO_POINTER(0), NULL);
+        gtk_tree_sortable_set_sort_column_id(sortable, gtk_tree_view_column_get_sort_column_id(column), GTK_SORT_ASCENDING);
         ASC_sort = TRUE;
     }
 
@@ -124,51 +148,23 @@ void on_column_clicked(GtkTreeViewColumn *column, gpointer user_data) {
     gtk_tree_view_column_clicked(column);
 }
 
+std::string formatted_datetime(const std::string& unix_time_str) {
+    using namespace std::chrono;
 
-// Функция обработки сигнала клика по заголовку колонки
-void on_column_clicked(GtkTreeViewColumn *column, gpointer user_data) {
-    GtkTreeView *treeview = GTK_TREE_VIEW(user_data);
-    GtkTreeSortable *sortable = GTK_TREE_SORTABLE(gtk_tree_view_get_model(treeview));
+    // Преобразование UNIX-времени в системное время (time_point)
+    long long unix_time = std::stoll(unix_time_str);
+    unix_time /= 1000;
+    time_point<system_clock> tp{seconds(unix_time)};
 
-    GtkSortType current_sort_order = gtk_tree_sortable_get_sort_order(sortable);
+    // Преобразование системного времени в структуру tm
+    std::time_t tt = system_clock::to_time_t(tp);
+    std::tm local_tm = *std::localtime(&tt);
 
-    if (current_sort_order == GTK_SORT_ASCENDING) {
-        // Если сортировка по возрастанию, меняем на сортировку по убыванию
-        gtk_tree_sortable_set_sort_column_id(sortable, -1, GTK_SORT_DESCENDING);
-        ascending_sort = FALSE;
-    } else if (current_sort_order == GTK_SORT_DESCENDING) {
-        // Если сортировка по убыванию, отключаем сортировку
-        gtk_tree_sortable_set_sort_column_id(sortable, -1, GTK_SORT_ASCENDING);
-        ascending_sort = TRUE;
-    } else {
-        // Если сортировка отключена, включаем сортировку по возрастанию
-        gint column_id = gtk_tree_view_column_get_sort_column_id(column);
-        gtk_tree_sortable_set_sort_column_id(sortable, column_id, GTK_SORT_ASCENDING);
-        ascending_sort = TRUE;
-    }
-
-    // Обновляем вид таблицы
-    gtk_tree_view_column_clicked(column);
+    // Форматирование времени в строку
+    std::ostringstream oss;
+    oss << std::put_time(&local_tm, "%d.%m.%y %H:%M:%S");
+    return oss.str();
 }
-
-
-
-std::basic_string<char> formatted_datetime(std::string time) {
-    float numberstart = std::stof(time);  // Преобразуем строку в число типа float
-    // Создаем структуру tm с помощью значения UNIX времени
-    struct tm *timeinfo;
-    numberstart /= 1000;
-    // Преобразуем значение float в тип time_t
-    time_t timeValue = static_cast<time_t>(numberstart);
-    timeinfo = localtime(reinterpret_cast<const time_t *>(&timeValue));
-    // Преобразуем структуру tm в строку с помощью функции strftime
-    char buffer[80];
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
-    std::string formattedTime(buffer);
-
-    return formattedTime;
-}
-
 
 // Функция для экспорта данных из GtkListStore в файл Excel
 void on_button2_clicked(GtkButton *button, gpointer user_data) {
@@ -267,7 +263,7 @@ void on_button2_clicked(GtkButton *button, gpointer user_data) {
 
 void on_renderer_clicked() {
     // Устанавливаем новый текст для label1
-    gtk_label_set_text(GTK_LABEL(label1), "НАЖАЛ НА 2 КНОПКУ!!!");
+    gtk_label_set_text(GTK_LABEL(label1), "Отработал тестовый сигнал!!!");
 }
 
 void create_scrollable_table(GtkButton *button, gpointer user_data) {
@@ -293,15 +289,66 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
 
     // Добавление GtkScrolledWindow в нижний GtkPaned
     gtk_paned_pack2(GTK_PANED(main_paned1), scrolled2, TRUE, TRUE);
+    
+    // Добавляем обработчик клика на заголовок столбцов
+    g_signal_connect(G_OBJECT(treeview), "column-clicked", G_CALLBACK(on_renderer_clicked), NULL);
 
     gtk_widget_show_all(window1);
 
 }
 
+int readlink1(const char* pathname, char* link, size_t linksize)
+{
+    HANDLE h = CreateFileA(pathname, 0, 0, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+    char buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+    DWORD dwBytesReturned = 0;
+    DeviceIoControl(h, FSCTL_GET_REPARSE_POINT, NULL, 0, buffer, sizeof(buffer), &dwBytesReturned, 0);
+    typedef struct
+    {
+        ULONG ReparseTag;
+        USHORT ReparseDataLength;
+        USHORT Reserved;
+        union
+        {
+            struct
+            {
+                USHORT SubstituteNameOffset;
+                USHORT SubstituteNameLength;
+                USHORT PrintNameOffset;
+                USHORT PrintNameLength;
+                ULONG Flags;
+                WCHAR PathBuffer[1];
+            } SymbolicLinkReparseBuffer;
+            struct
+            {
+                USHORT SubstituteNameOffset;
+                USHORT SubstituteNameLength;
+                USHORT PrintNameOffset;
+                USHORT PrintNameLength;
+                WCHAR PathBuffer[1];
+            } MountPointReparseBuffer;
+            struct
+            {
+                UCHAR  DataBuffer[1];
+            } GenericReparseBuffer;
+        };
+    } REPARSE_DATA_BUFFER;
+    REPARSE_DATA_BUFFER* pRDB = reinterpret_cast<REPARSE_DATA_BUFFER*>(buffer);
+    if (pRDB->ReparseTag == IO_REPARSE_TAG_SYMLINK)
+    {
+        int nameLength = pRDB->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(wchar_t);
+        wchar_t* pName = (wchar_t*)((char*)pRDB->SymbolicLinkReparseBuffer.PathBuffer + pRDB->SymbolicLinkReparseBuffer.SubstituteNameOffset);
+        int bytesWritten = WideCharToMultiByte(CP_UTF8, 0, pName, nameLength, link, linksize, NULL, NULL);
+        return bytesWritten;
+    }
+    CloseHandle(h);
+    return -1;
+}
+
 // Функция для получения пути к исполняемому файлу
 std::string getExecutablePath() {
     char path[PATH_MAX];
-    ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+    ssize_t count = readlink1("/proc/self/exe", path, PATH_MAX);
     if (count != -1) {
         path[count] = '\0';
         return std::string(path);
@@ -372,7 +419,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
 
     gint res;
     int k = 0;
-//
+    
     std::vector<std::string> paramAttrInBlock;
     std::vector<std::string> resultAttrInBlock;
 
@@ -401,34 +448,44 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
         int numColumns = 33; // Количество столбцов
 
         // Создание таблицы
-        treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(liststoreResult));
+        //treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(liststoreResult));
+        treeview = gtk_tree_view_new(); // Не указываем модель данных здесь
+        
         renderer = gtk_cell_renderer_text_new();
-//        gtk_list_store_append(liststoreResult, &iterResult);
+
         std::vector<const char *> values(numColumns);
 
-        // Вместо создания отдельных переменных для каждой колонки, можно использовать массив указателей на GtkWidget:
-        GtkWidget *columns[numColumns];
+        GtkTreeViewColumn *columns[numColumns];
 
-        gchar *titles[] = {
+        const gchar *titles[] = {
                 "Время", "Uab, B", "Ubc, B", "Uca, B", "Ia, A", "Ib, A", "Ic, A",
                 "Ua, B", "Ub, B", "Uc, B", "Pп, Вт", "Pо, Вт", "Pн, Вт", "Qп, Вар",
                 "Qо, Вар", "Qн, Вар", "Sп, ВА", "Sо, ВА", "Sн, ВА", "Uп, В", "Uо, В",
                 "Uн, В", "Iп, А", "Iо, А", "Iн, А", "Kо", "Kн", "△f, Гц",
                 "△Uy, %", "△UyA, %", "△UyB, %", "△UyC, %"
         }; // TODO проверить столбцы
+        
         for (int i = 0; i < numColumns; ++i) {
-//            if (!columnsCreated) {
-            columns[i] = reinterpret_cast<GtkWidget *>(gtk_tree_view_column_new());
+
+            columns[i] = gtk_tree_view_column_new();
             gchar *title = g_strdup_printf("%s", titles[i]);
             gtk_tree_view_column_set_title(GTK_TREE_VIEW_COLUMN(columns[i]), title);
             g_free(title);
-
-//            }
+	    
             gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(columns[i]), renderer, TRUE);
             gtk_tree_view_column_add_attribute(GTK_TREE_VIEW_COLUMN(columns[i]), renderer, "text", i);
 
             gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), reinterpret_cast<GtkTreeViewColumn *>(columns[i]));
+            
+            // Установка кликабельности заголовков столбцов
+            gtk_tree_view_column_set_clickable(columns[i], TRUE);
+            g_signal_connect(columns[i], "clicked", G_CALLBACK(on_column_clicked), treeview);
+            
         }
+        
+        // Устанавливаем модель данных для GtkTreeView
+        gtk_tree_view_set_model(GTK_TREE_VIEW(treeview), GTK_TREE_MODEL(liststoreResult));
+
 
         for (const auto &entry: std::filesystem::directory_iterator(folder_path)) {
             // проход по всем файлам в папке
@@ -475,17 +532,19 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
 
                 for (int i = 1; i < numColumns; ++i) {
                     values[i] = g_strdup_printf("%s", resultAttrInBlock[i].c_str());
+                    
                 }
 
                 //TimeTek
-                std::string formattedTek_str = formatted_datetime(values[1]);
-                const char *formattedTek = formattedTek_str.c_str();
+                std::cout << formatted_datetime(values[1]).c_str() << std::endl;
+                // std::string formattedTek_str = formatted_datetime(values[1]);
+                // const char *formattedTek = formattedTek_str.c_str();
 
                 // Добавляем новую строку
                 gtk_list_store_append(liststoreResult, &iterResult);
 
                 gtk_list_store_set(liststoreResult, &iterResult,
-                                   0, formattedTek,
+                                   0, formatted_datetime(values[1]).c_str(),
                                    1, values[2],
                                    2, values[3],
                                    3, values[4],
@@ -519,16 +578,10 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
                                    31, values[32],
 //                                   32, values[33],
                                    -1); // Note: The last argument should be -1 to indicate the end of the list.
-                //                GtkListStore *liststore = GTK_LIST_STORE(user_data);
-                // Удаление первой строки
-//                GtkTreeIter first_row;
-//                if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(liststore), &first_row)) {
-//                    gtk_list_store_remove(liststore, &first_row);
-//                }
+
                 // здесь надо реализовать заполнение одной строки
 //-----------------------------------------------------------------------------------------------------------------------------------------
                 resultAttrInBlock.clear();
-//                gtk_list_store_clear(liststoreResult);
 
 
             }
@@ -701,6 +754,8 @@ int main(int argc, char *argv[]) {
         g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), liststore1);
         g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), window1);
         g_signal_connect(button3, "clicked", G_CALLBACK(on_button3_clicked), window1);
+        
+        
 
         g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
         g_signal_connect(window2, "destroy", G_CALLBACK(gtk_main_quit), NULL);
@@ -714,3 +769,4 @@ int main(int argc, char *argv[]) {
     }
     return EXIT_SUCCESS;
 }
+
