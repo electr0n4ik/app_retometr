@@ -331,6 +331,13 @@ void on_button2_clicked(GtkButton *button, gpointer user_data) {
     std::string end_reg_str = formatted_datetime(end_reg);
     // const char *end_reg_exl = end_reg_str.c_str();
 
+    // Записываем заголовки столбцов в Excel
+    for (int col = 0; col < num_columns - 1; col++) {
+        const gchar *column_name = titles[col];
+        std::string cell_address = xlnt::cell_reference(col + 1, 4).to_string();
+        worksheet.cell(cell_address).value(column_name);
+    }
+
     worksheet.cell("A1").value("Название объекта:");
     worksheet.cell("B1").value(name_object);
     worksheet.cell("F1").value("Начало регистрации:");
@@ -341,15 +348,7 @@ void on_button2_clicked(GtkButton *button, gpointer user_data) {
     worksheet.cell("F2").value("Схема соединения:");
     worksheet.cell("J2").value(schematic_connect);
     worksheet.cell("L2").value("Интервал усреднения:");
-    worksheet.cell("P2").value(average_interval);
-
-    // Записываем заголовки столбцов в Excel
-    for (int col = 0; col < num_columns - 1; col++) {
-        const gchar *column_name = titles[col];
-        std::string cell_address = xlnt::cell_reference(col + 1, 4).to_string();
-        worksheet.cell(cell_address).value(column_name);
-        std::cout << column_name << " ";
-    }
+    worksheet.cell("O2").value(average_interval);
 
     // // Записываем данные из GtkListStore в Excel
     for (int row = 4; row < num_rows + 4; row++) {
@@ -362,10 +361,18 @@ void on_button2_clicked(GtkButton *button, gpointer user_data) {
 
             if (str_value) {
                 worksheet.cell(col + 1, row + 1).value(g_strdup(str_value));
+
+                int str_lenght = g_utf8_strlen(str_value, -1);
+
+                // Устанавливаем ширину столбца
+                worksheet.column_properties(col + 1).width = str_lenght + 3;
+                std::cout << str_lenght << " " << col << std::endl;
+                
+
             }
         }
     }
-
+    
     // Сохраняем файл Excel
     workbook.save(full_output_path);
 
