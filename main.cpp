@@ -1,31 +1,36 @@
 #include "pugixml.hpp"
 #include "gtk/gtk.h"
 #include "gdk/gdk.h"
-#include <xlsxwriter.h>
+
+// #include <xlsxwriter.h>
+#include <xlnt/xlnt.hpp>
+
 #include <glib.h>
-#include <cstdlib>
+#include <gio/gio.h> // Для использования GBytes
 #include <iostream>
-#include <sstream>
-#include <vector>
-#include <fstream>
-#include <string>
-#include <regex>
 #include <filesystem>
-#include <ctime>
-#include <cstdio>
-#include <cstdlib>
-#include <iomanip>
-#include <chrono>
-#include <ctime>
+#include <vector>
+// #include <sstream>
+// #include <fstream>
+// #include <string>
+
+
+// #include <ctime>
+// #include <cstdio>
+// #include <cstdlib>
+// #include <iomanip>
+// #include <chrono>
+// #include <ctime>
 
 #ifdef _WIN32
 #include <windows.h>
+#include <direct.h>
+#define make_dir(dir) _wmkdir(dir)
 #elif __linux__
-
 #include <unistd.h>
-
+#include <sys/stat.h>
+#define make_dir(dir) mkdir(dir, 0777)
 #endif
-
 
 GtkBuilder *builder;
 //--------------------------------------//
@@ -95,9 +100,20 @@ GtkListStore *liststoreResult = gtk_list_store_new(33, G_TYPE_STRING, G_TYPE_STR
 
 gchar *folder_path;
 
+const gchar *titles[] = {
+                "Время", "Uab, B", "Ubc, B", "Uca, B", "Ia, A", "Ib, A", "Ic, A",
+                "Ua, B", "Ub, B", "Uc, B", "Pп, Вт", "Pо, Вт", "Pн, Вт", "Qп, Вар",
+                "Qо, Вар", "Qн, Вар", "Sп, ВА", "Sо, ВА", "Sн, ВА", "Uп, В", "Uо, В",
+                "Uн, В", "Iп, А", "Iо, А", "Iн, А", "Kо", "Kн", "△f, Гц",
+                "△Uy, %", "△UyA, %", "△UyB, %", "△UyC, %"
+        };
 
 gboolean ASC_sort = FALSE; // Глобальная переменная для отслеживания текущего типа сортировки ASC в порядке возрастания
 gboolean DESC_sort = FALSE; // Глобальная переменная для отслеживания текущего типа сортировки DESC в порядке убывания
+
+std::string getExecutablePath() {
+    return std::filesystem::current_path().string();
+}
 
 // Функция сравнения для сортировки строк (G_TYPE_STRING) в GtkListStore
 static gint compare_func(GtkTreeModel *model, GtkTreeIter *iter1, GtkTreeIter *iter2, gpointer user_data) {
@@ -115,6 +131,24 @@ static gint compare_func(GtkTreeModel *model, GtkTreeIter *iter1, GtkTreeIter *i
 
     // Возвращаем результат сравнения
     return result;
+}
+
+std::string formatted_datetime(const std::string& unix_time_str) {
+    using namespace std::chrono;
+
+    // Преобразование UNIX-времени в системное время (time_point)
+    long long unix_time = std::stoll(unix_time_str);
+    unix_time /= 1000;
+    time_point<system_clock> tp{seconds(unix_time)};
+
+    // Преобразование системного времени в структуру tm
+    std::time_t tt = system_clock::to_time_t(tp);
+    std::tm local_tm = *std::localtime(&tt);
+
+    // Форматирование времени в строку
+    std::ostringstream oss;
+    oss << std::put_time(&local_tm, "%d.%m.%y %H:%M:%S");
+    return oss.str();
 }
 
 // Функция обработки сигнала клика по заголовку колонки
@@ -148,82 +182,181 @@ void on_column_clicked(GtkTreeViewColumn *column, gpointer user_data) {
     gtk_tree_view_column_clicked(column);
 }
 
-std::string formatted_datetime(const std::string& unix_time_str) {
-    using namespace std::chrono;
-
-    // Преобразование UNIX-времени в системное время (time_point)
-    long long unix_time = std::stoll(unix_time_str);
-    unix_time /= 1000;
-    time_point<system_clock> tp{seconds(unix_time)};
-
-    // Преобразование системного времени в структуру tm
-    std::time_t tt = system_clock::to_time_t(tp);
-    std::tm local_tm = *std::localtime(&tt);
-
-    // Форматирование времени в строку
-    std::ostringstream oss;
-    oss << std::put_time(&local_tm, "%d.%m.%y %H:%M:%S");
-    return oss.str();
-}
-
 // Функция для экспорта данных из GtkListStore в файл Excel
+// void on_button2_clicked(GtkButton *button, gpointer user_data) {
+
+//     GtkTreeModel *model = GTK_TREE_MODEL(liststoreResult);
+//     GtkTreeIter iter;
+
+//     time_t current_time;
+//     time(&current_time);
+    
+//     std::string output_filename_str = "output_" + std::to_string(current_time) + ".xlsx";
+
+//     std::string executable_path = getExecutablePath();
+
+//     // Создаем полный путь к файлу Excel рядом с исполняемым файлом
+//     std::string full_output_path = executable_path + "\\" + output_filename_str;
+
+//     // Записываем содержимое в файл Excel
+//     lxw_workbook *workbook = workbook_new_opt(full_output_path.c_str(), NULL);
+//     lxw_worksheet *worksheet = workbook_add_worksheet(workbook, NULL);
+
+//     int num_rows = gtk_tree_model_iter_n_children(model, NULL);
+//     int num_columns = gtk_tree_model_get_n_columns(model);  
+
+// // Инициализируем массив max_column_width нулями
+//     int max_column_width[num_columns];
+//     memset(max_column_width, 0, sizeof(max_column_width));
+
+//     const char *name_object_exl = name_object.c_str();
+
+//     std::string start_reg_str = formatted_datetime(start_reg);
+//     const char *start_reg_exl = start_reg_str.c_str();
+
+//     const char *schematic_connect_exl = schematic_connect.c_str();
+//     const char *average_interval_exl = average_interval.c_str();
+
+//     std::string end_reg_str = formatted_datetime(start_reg);
+//     const char *end_reg_exl = end_reg_str.c_str();
+
+//     worksheet_write_string(worksheet, 0, 0, "Название объекта: ", NULL);
+//     worksheet_write_string(worksheet, 0, 1, name_object_exl, NULL);
+//     worksheet_write_string(worksheet, 0, 5, "Начало регистрации: ", NULL);
+//     worksheet_write_string(worksheet, 0, 8, start_reg_exl, NULL);
+//     worksheet_write_string(worksheet, 0, 11, "Окончание регистрации: ", NULL);
+//     worksheet_write_string(worksheet, 0, 14, end_reg_exl, NULL);
+
+//     // Добавляем данные во вторую строку и 4-ю колонку
+//     worksheet_write_string(worksheet, 1, 5, "Схема соединения: ", NULL);
+//     worksheet_write_string(worksheet, 1, 9, schematic_connect_exl, NULL);
+
+//     // Добавляем данные во вторую строку и 5-ю колонку, используя числовое значение
+//     worksheet_write_string(worksheet, 1, 11, "Интервал усреднения: ", NULL);
+//     worksheet_write_string(worksheet, 1, 15, average_interval_exl, NULL);
+
+
+//     // Записываем заголовки столбцов в Excel
+//     // for (int col = 0; col < num_columns; col++) {
+//     //     GtkTreeViewColumn *column = gtk_tree_view_get_column(GTK_TREE_VIEW(treeview), col);
+//     //     const gchar *column_name = gtk_tree_view_column_get_title(column);
+//     //     std::cout << column_name << " ";
+//     //     worksheet_write_string(worksheet, 4, col, column_name, NULL);
+//     // }
+
+//     // Записываем заголовки столбцов в Excel
+//     for (int col = 0; col < num_columns; col++) {
+//         const gchar *column_name = titles[col]; //const char *
+//         // std::cout << g_strdup(column_name) << "\t"; // Вывод заголовка в консоль
+//         worksheet_write_string(worksheet, 4, col, g_strdup(column_name), NULL);
+//     }
+
+//     // Записываем данные из GtkListStore в Excel
+//     for (int row = 4; row < num_rows + 4; row++) {
+//         gtk_tree_model_iter_nth_child(model, &iter, NULL, row - 4);
+        
+
+//         for (int col = 0; col < num_columns; col++) {
+//             GValue value = G_VALUE_INIT;
+//             gtk_tree_model_get_value(model, &iter, col, &value);
+//             const gchar *str_value = g_value_get_string(&value);
+            
+                        
+//             if (str_value) {
+                
+//                 worksheet_write_string(worksheet, row + 1, col, g_strdup(str_value), NULL);
+//                 std::cout << g_strdup(str_value) << " ";
+//                 int value_width = g_utf8_strlen(str_value, -1);
+
+//                 if (value_width > max_column_width[col]) {
+//                     max_column_width[col] = value_width;
+//                     worksheet_set_column(worksheet, col, col, value_width + 3, NULL);
+                    
+//                 }
+                
+//             }
+
+//             // g_value_unset(&value);
+//         }
+//     }
+
+//     // Закрываем файл Excel и освобождаем ресурсы
+//     if (workbook_close(workbook) != LXW_NO_ERROR) {
+//         g_printerr("Ошибка при сохранении файла Excel.\n");
+//     }
+
+
+//     //Открывает excel, работает на win10(остальные проверить)
+//     // #ifdef _WIN32
+//     //     // Открываем файл в ассоциированном приложении
+//     //     ShellExecuteA(NULL, "open", full_output_path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+//     // #elif __linux__
+//     //     // Открываем файл через xdg-open
+//     //     if (fork() == 0) {
+//     //         execlp("xdg-open", "xdg-open", full_output_path.c_str(), NULL);
+//     //     }
+//     // #endif
+// }
+
 void on_button2_clicked(GtkButton *button, gpointer user_data) {
 
     GtkTreeModel *model = GTK_TREE_MODEL(liststoreResult);
     GtkTreeIter iter;
 
-    // Создаем новый файл Excel
+    time_t current_time;
+    time(&current_time);
+    
 
-    std::string name_file_str = formatted_datetime(start_reg);
-    const char *name_file_exl = name_file_str.append(".xlsx").c_str();
+    
+    std::string output_filename_str = "output_" + std::to_string(current_time) + ".xlsx";
 
-    lxw_workbook *workbook = workbook_new_opt(name_file_exl, NULL);
+    std::string executable_path = getExecutablePath();
 
-    lxw_worksheet *worksheet = workbook_add_worksheet(workbook, NULL);
+    // Создаем полный путь к файлу Excel рядом с исполняемым файлом
+    std::string full_output_path = executable_path + "\\" + output_filename_str;
 
-    // Получаем количество строк и столбцов в GtkListStore
-    gint num_rows = gtk_tree_model_iter_n_children(model, NULL);
-    gint num_columns = gtk_tree_model_get_n_columns(model);
+    // Создаем объект для работы с файлом Excel
+    xlnt::workbook workbook;
+    xlnt::worksheet worksheet = workbook.active_sheet();
 
-// Инициализируем массив max_column_width нулями
-    gint max_column_width[num_columns];
+    int num_rows = gtk_tree_model_iter_n_children(model, NULL);
+    int num_columns = gtk_tree_model_get_n_columns(model);
+    
+    // Инициализируем массив max_column_width нулями
+    int max_column_width[num_columns];
     memset(max_column_width, 0, sizeof(max_column_width));
 
-    const char *name_object_exl = name_object.c_str();
+    // const char *name_object_exl = name_object.c_str();
 
     std::string start_reg_str = formatted_datetime(start_reg);
-    const char *start_reg_exl = start_reg_str.c_str();
+    // const char *start_reg_exl = start_reg_str.c_str();
 
-    const char *schematic_connect_exl = schematic_connect.c_str();
-    const char *average_interval_exl = average_interval.c_str();
+    // const char *schematic_connect_exl = schematic_connect.c_str();
+    // const char *average_interval_exl = average_interval.c_str();
 
-    std::string end_reg_str = formatted_datetime(start_reg);
-    const char *end_reg_exl = end_reg_str.c_str();
+    std::string end_reg_str = formatted_datetime(end_reg);
+    // const char *end_reg_exl = end_reg_str.c_str();
+    
+    worksheet.cell("A1").value("Название объекта:");
+    worksheet.cell("B1").value(name_object);
+    worksheet.cell("F1").value("Начало регистрации:");
+    worksheet.cell("I1").value(start_reg_str);
+    worksheet.cell("L1").value("Окончание регистрации:");
+    worksheet.cell("O1").value(end_reg_str);
 
-    worksheet_write_string(worksheet, 0, 0, "Название объекта: ", NULL);
-    worksheet_write_string(worksheet, 0, 1, name_object_exl, NULL);
-    worksheet_write_string(worksheet, 0, 5, "Начало регистрации: ", NULL);
-    worksheet_write_string(worksheet, 0, 8, start_reg_exl, NULL);
-    worksheet_write_string(worksheet, 0, 11, "Окончание регистрации: ", NULL);
-    worksheet_write_string(worksheet, 0, 14, end_reg_exl, NULL);
-
-    // Добавляем данные во вторую строку и 4-ю колонку
-    worksheet_write_string(worksheet, 1, 5, "Схема соединения: ", NULL);
-    worksheet_write_string(worksheet, 1, 8, schematic_connect_exl, NULL);
-
-    // Добавляем данные во вторую строку и 5-ю колонку, используя числовое значение
-    worksheet_write_string(worksheet, 1, 11, "Интервал усреднения: ", NULL);
-    worksheet_write_string(worksheet, 1, 14, average_interval_exl, NULL);
-
+    worksheet.cell("F2").value("Схема соединения:");
+    worksheet.cell("J2").value(schematic_connect);
+    worksheet.cell("L2").value("Интервал усреднения:");
+    worksheet.cell("O2").value(average_interval);
 
     // Записываем заголовки столбцов в Excel
-    for (int col = 0; col < num_columns; col++) {
-        GtkTreeViewColumn *column = gtk_tree_view_get_column(GTK_TREE_VIEW(treeview), col);
-        const gchar *column_name = gtk_tree_view_column_get_title(column);
-        worksheet_write_string(worksheet, 4, col, column_name, NULL);
+    for (int col = 0; col < num_columns - 1; col++) {
+        const gchar *column_name = titles[col];
+        std::string cell_address = xlnt::cell_reference(col + 1, 4).to_string();
+        worksheet.cell(cell_address).value(column_name);
     }
 
-    // Записываем данные из GtkListStore в Excel
+    // // Записываем данные из GtkListStore в Excel
     for (int row = 4; row < num_rows + 4; row++) {
         gtk_tree_model_iter_nth_child(model, &iter, NULL, row - 4);
 
@@ -232,34 +365,35 @@ void on_button2_clicked(GtkButton *button, gpointer user_data) {
             gtk_tree_model_get_value(model, &iter, col, &value);
             const gchar *str_value = g_value_get_string(&value);
 
-            worksheet_write_string(worksheet, row + 1, col, str_value, NULL);
+            if (str_value) {
+                worksheet.cell(col + 1, row + 1).value(g_strdup(str_value));
+                int str_lenght = g_utf8_strlen(str_value, -1);
 
-            int value_width = g_utf8_strlen(str_value, -1);
-
-            if (value_width > max_column_width[col]) {
-                max_column_width[col] = value_width;
-                worksheet_set_column(worksheet, col, col, value_width + 3, NULL);
+                if (str_lenght > max_column_width[col]) {
+                    max_column_width[col] = str_lenght;
+                    // Устанавливаем ширину столбца
+                    worksheet.column_properties(col + 1).width = str_lenght + 3;
+                }
             }
-
-            g_value_unset(&value);
         }
     }
+    
+    // Сохраняем файл Excel
+    workbook.save(full_output_path);
+    
+    //Открывает excel, работает на win10(остальные проверить)
+    #ifdef _WIN32
+    	// Открываем файл в ассоциированном приложении
+    	ShellExecuteA(NULL, "open", full_output_path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    #elif __linux__
+    	// Открываем файл через xdg-open
+    	if (fork() == 0) {
+    		execlp("xdg-open", "xdg-open", full_output_path.c_str(), NULL);
+    	}
+    #endif
 
-    // Закрываем файл Excel и освобождаем ресурсы
-    if (workbook_close(workbook) != LXW_NO_ERROR) {
-        g_printerr("Ошибка при сохранении файла Excel.\n");
-    }
-
-#ifdef _WIN32
-    // Для Windows используем команду "start" для открытия файла через ассоциированное приложение
-    ShellExecuteA(NULL, "open", name_file_exl, NULL, NULL, SW_SHOWNORMAL); //"output.xlsx"
-#elif __linux__
-    // Для Linux используем команду "xdg-open" для открытия файла через ассоциированное приложение
-    if (fork() == 0) {
-        execlp("xdg-open", "xdg-open", name_file_exl, NULL);
-    }
-#endif
 }
+
 
 void on_renderer_clicked() {
     // Устанавливаем новый текст для label1
@@ -270,9 +404,8 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
 
 
     main_paned1 = GTK_WIDGET(gtk_builder_get_object(builder, "main_paned1"));
-//    GtkWidget *upper_paned = gtk_paned_get_child1(GTK_PANED(main_paned1));
-//    GtkWidget *lower_paned = gtk_paned_get_child2(GTK_PANED(main_paned1));
-    // Задаем фиксированную позицию для верхней части
+
+    // Задаем фиксированную позицию для верхней части(исправить)
     gtk_paned_set_position(GTK_PANED(main_paned1), 200); // Установите здесь желаемую фиксированную высоту
 
     GtkWidget *scrolled2 = gtk_scrolled_window_new(NULL, NULL);
@@ -291,70 +424,12 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
     gtk_paned_pack2(GTK_PANED(main_paned1), scrolled2, TRUE, TRUE);
     
     // Добавляем обработчик клика на заголовок столбцов
-    g_signal_connect(G_OBJECT(treeview), "column-clicked", G_CALLBACK(on_renderer_clicked), NULL);
+    //g_signal_connect(G_OBJECT(treeview), "column-clicked", G_CALLBACK(on_renderer_clicked), NULL);
 
     gtk_widget_show_all(window1);
 
 }
 
-int readlink1(const char* pathname, char* link, size_t linksize)
-{
-    HANDLE h = CreateFileA(pathname, 0, 0, NULL, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, NULL);
-    char buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
-    DWORD dwBytesReturned = 0;
-    DeviceIoControl(h, FSCTL_GET_REPARSE_POINT, NULL, 0, buffer, sizeof(buffer), &dwBytesReturned, 0);
-    typedef struct
-    {
-        ULONG ReparseTag;
-        USHORT ReparseDataLength;
-        USHORT Reserved;
-        union
-        {
-            struct
-            {
-                USHORT SubstituteNameOffset;
-                USHORT SubstituteNameLength;
-                USHORT PrintNameOffset;
-                USHORT PrintNameLength;
-                ULONG Flags;
-                WCHAR PathBuffer[1];
-            } SymbolicLinkReparseBuffer;
-            struct
-            {
-                USHORT SubstituteNameOffset;
-                USHORT SubstituteNameLength;
-                USHORT PrintNameOffset;
-                USHORT PrintNameLength;
-                WCHAR PathBuffer[1];
-            } MountPointReparseBuffer;
-            struct
-            {
-                UCHAR  DataBuffer[1];
-            } GenericReparseBuffer;
-        };
-    } REPARSE_DATA_BUFFER;
-    REPARSE_DATA_BUFFER* pRDB = reinterpret_cast<REPARSE_DATA_BUFFER*>(buffer);
-    if (pRDB->ReparseTag == IO_REPARSE_TAG_SYMLINK)
-    {
-        int nameLength = pRDB->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(wchar_t);
-        wchar_t* pName = (wchar_t*)((char*)pRDB->SymbolicLinkReparseBuffer.PathBuffer + pRDB->SymbolicLinkReparseBuffer.SubstituteNameOffset);
-        int bytesWritten = WideCharToMultiByte(CP_UTF8, 0, pName, nameLength, link, linksize, NULL, NULL);
-        return bytesWritten;
-    }
-    CloseHandle(h);
-    return -1;
-}
-
-// Функция для получения пути к исполняемому файлу
-std::string getExecutablePath() {
-    char path[PATH_MAX];
-    ssize_t count = readlink1("/proc/self/exe", path, PATH_MAX);
-    if (count != -1) {
-        path[count] = '\0';
-        return std::string(path);
-    }
-    return "";
-}
 
 // Функция для получения директории из пути
 std::string getDirectoryFromPath(const std::string &path) {
@@ -365,22 +440,22 @@ std::string getDirectoryFromPath(const std::string &path) {
     return "";
 }
 
-// Функция для загрузки содержимого файла в память
-GBytes *loadFileContents(const gchar *filename) {
-    GError *error = NULL;
-    gsize fileSize;
-    gchar *fileContents = NULL;
+// // Функция для загрузки содержимого файла в память
+// GBytes *loadFileContents(const gchar *filename) {
+//     GError *error = NULL;
+//     gsize fileSize;
+//     gchar *fileContents = NULL;
 
-    if (!g_file_get_contents(filename, &fileContents, &fileSize, &error)) {
-        g_print("Failed to load file '%s': %s\n", filename, error->message);
-        g_error_free(error);
-        return NULL;
-    }
+//     if (!g_file_get_contents(filename, &fileContents, &fileSize, &error)) {
+//         g_print("Failed to load file '%s': %s\n", filename, error->message);
+//         g_error_free(error);
+//         return NULL;
+//     }
 
-    GBytes *bytes = g_bytes_new_static(fileContents, fileSize);
+//     GBytes *bytes = g_bytes_new_static(fileContents, fileSize);
 
-    return bytes;
-}
+//     return bytes;
+// }
 
 //--------------------------------------//
 //обработчик события для кнопки button6
@@ -406,7 +481,6 @@ void on_button3_clicked(GtkButton *button, gpointer user_data) {
     g_signal_connect(button6, "clicked", G_CALLBACK(on_button6_clicked), window2);
 
     gtk_widget_show_all(window2);
-    //g_object_unref(G_OBJECT(builder));
 }
 
 //--------------------------------------//
@@ -436,6 +510,9 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
 
     // Если пользователь выбрал папку
     if (res == GTK_RESPONSE_ACCEPT) {
+
+        
+
         // Очищаем список перед добавлением новых строк
         gtk_list_store_clear(liststoreResult);
 
@@ -445,7 +522,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
         GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
         folder_path = gtk_file_chooser_get_filename(chooser);
 
-        int numColumns = 33; // Количество столбцов
+        int numColumns = 32; // Количество столбцов
 
         // Создание таблицы
         //treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(liststoreResult));
@@ -456,14 +533,6 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
         std::vector<const char *> values(numColumns);
 
         GtkTreeViewColumn *columns[numColumns];
-
-        const gchar *titles[] = {
-                "Время", "Uab, B", "Ubc, B", "Uca, B", "Ia, A", "Ib, A", "Ic, A",
-                "Ua, B", "Ub, B", "Uc, B", "Pп, Вт", "Pо, Вт", "Pн, Вт", "Qп, Вар",
-                "Qо, Вар", "Qн, Вар", "Sп, ВА", "Sо, ВА", "Sн, ВА", "Uп, В", "Uо, В",
-                "Uн, В", "Iп, А", "Iо, А", "Iн, А", "Kо", "Kн", "△f, Гц",
-                "△Uy, %", "△UyA, %", "△UyB, %", "△UyC, %"
-        }; // TODO проверить столбцы
         
         for (int i = 0; i < numColumns; ++i) {
 
@@ -479,7 +548,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
             
             // Установка кликабельности заголовков столбцов
             gtk_tree_view_column_set_clickable(columns[i], TRUE);
-            g_signal_connect(columns[i], "clicked", G_CALLBACK(on_column_clicked), treeview);
+            g_signal_connect(columns[i], "clicked", G_CALLBACK(on_column_clicked), NULL);
             
         }
         
@@ -530,15 +599,12 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
                 // Добавляем новую строку
 
 
-                for (int i = 1; i < numColumns; ++i) {
+                for (int i = 1; i < numColumns + 1; ++i) {
                     values[i] = g_strdup_printf("%s", resultAttrInBlock[i].c_str());
-                    
                 }
 
                 //TimeTek
-                std::cout << formatted_datetime(values[1]).c_str() << std::endl;
-                // std::string formattedTek_str = formatted_datetime(values[1]);
-                // const char *formattedTek = formattedTek_str.c_str();
+                const char *TimeTek = formatted_datetime(values[1]).c_str();
 
                 // Добавляем новую строку
                 gtk_list_store_append(liststoreResult, &iterResult);
@@ -751,7 +817,7 @@ int main(int argc, char *argv[]) {
 //        g_signal_connect(selection, "row_activated", G_CALLBACK(on_row_activated), NULL);
 
         // Подключение обработчиков событий
-        g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), liststore1);
+        g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), NULL);
         g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), window1);
         g_signal_connect(button3, "clicked", G_CALLBACK(on_button3_clicked), window1);
         
@@ -769,4 +835,3 @@ int main(int argc, char *argv[]) {
     }
     return EXIT_SUCCESS;
 }
-
