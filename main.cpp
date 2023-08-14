@@ -331,19 +331,70 @@ void about_program(GtkWidget *about_program_submenu, gpointer user_data) {
 }
 
 //--------------------------------------//
-//обработчик события для кнопки button3
+//обработчик события для кнопки "Обозначения"
 void about_termins(GtkWidget *about_termins_submenu, gpointer user_data) {
-    builder = gtk_builder_new_from_file(gladeFilePath.c_str());
-    window2 = GTK_WIDGET(gtk_builder_get_object(builder, "window2"));
-    gtk_window_set_title(GTK_WINDOW(window2), "О программе");
+    GtkWidget *window_termins = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    
+    gtk_window_set_title(GTK_WINDOW(window_termins), "Обозначения");
+    gtk_window_set_default_size(GTK_WINDOW(window_termins), 600, 700);
 
-    fixed2 = GTK_WIDGET(gtk_builder_get_object(builder, "fixed2"));
-    labelabout = GTK_WIDGET(gtk_builder_get_object(builder, "labelabout"));
-    button6 = GTK_WIDGET(gtk_builder_get_object(builder, "button6"));
+    GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled_window), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    
+    GtkTextBuffer *buffer = gtk_text_buffer_new(NULL);
+    GtkTextView *text_view = GTK_TEXT_VIEW(gtk_text_view_new_with_buffer(buffer));
+    gtk_text_view_set_editable(text_view, FALSE);
+    gtk_text_view_set_wrap_mode(text_view, GTK_WRAP_WORD_CHAR);
+    gtk_text_buffer_set_text(buffer,
+        "  Uab - действующее значение напряжения  первой гармоники между фазами A, B\n"
+        "  Ubc - действующее значение напряжения  первой гармоники между фазами B, C\n"
+        "  Uca - действующее значение напряжения  первой гармоники между фазами C, \n"
+        "  Iab - действующее значение тока первой гармоники между фазами A, B\n"
+        "  Ibc - действующее значение тока первой гармоники между фазами B, C\n"
+        "  Ica - действующее значение тока первой гармоники между фазами C, A\n"
+        "  Ia - действующее значение тока первой гармоники фазы A\n"
+        "  Ib - действующее значение тока первой гармоники фазы B\n"
+        "  Ic - действующее значение тока первой гармоники фазы C\n"
+        "  Ua - действующее значение напряжения первой гармоники фазы A\n"
+        "  Ub - действующее значение напряжения первой гармоники фазы B\n"
+        "  Uc - действующее значение напряжения первой гармоники фазы C\n"
+        "  Pп - активная электрическая мощность прямой последовательности\n"
+        "  Pо - активная электрическая мощность обратной последовательности\n"
+        "  Pн - активная электрическая мощность нулевой последовательности\n"
+        "  Qп - реактивная электрическая мощность прямой последовательности\n"
+        "  Qо - реактивная электрическая мощность обратной последовательности\n"
+        "  Qн - реактивная электрическая мощность нулевой последовательности\n"
+        "  Sп - полная электрическая мощность прямой последовательности\n"
+        "  Sо - полная электрическая мощность обратной  последовательности\n"
+        "  Sн - полная электрическая мощность нулевой последовательности\n"
+        "  Uп - значение напряжения переменного тока прямой последовательности\n"
+        "  Uо - значение напряжения переменного тока обратной последовательности\n"
+        "  Uн - значение напряжения переменного тока нулевой последовательности\n"
+        "  Iп - значение силы переменного тока прямой последовательности\n"
+        "  Iо - значение силы переменного тока обратной последовательности\n"
+        "  Iн - значение силы переменного тока нулевой последовательности\n"
+        "  Kо - коэффициент несимметрии напряжения по обратной последовательности\n"
+        "  Kн - коэффициент несимметрии напряжения по нулевой последовательности\n"
+        "  ∆f, Гц - отклонение частоты\n"
+        "  ∆Uy - установившееся отклонение напряжения прямой последовательности\n"
+        "  ∆UyAB - установившееся отклонение напряжения между фазами A, B\n"
+        "  ∆UyBC - установившееся отклонение напряжения между фазами B, C\n"
+        "  ∆UyCA - установившееся отклонение напряжения между фазами C, A\n"
+        "  ∆UyA - установившееся отклонение напряжения фазы A\n"
+        "  ∆UyB - установившееся отклонение напряжения фазы B\n"
+        "  ∆UyC - установившееся отклонение напряжения фазы C\n"
+        "  схема проверки 1 = 1-ф 2-пр\n"
+        "  схема проверки 2 = 3-ф 3-пр\n"
+        "  схема проверки 3 = 3-ф 4-пр", -1);
 
-    g_signal_connect(button6, "clicked", G_CALLBACK(designations), window2);
+    GtkWidget *button6 = GTK_WIDGET(gtk_builder_get_object(builder, "button6"));
 
-    gtk_widget_show_all(window2);
+    g_signal_connect(button6, "clicked", G_CALLBACK(designations), window_termins);
+
+    gtk_container_add(GTK_CONTAINER(scrolled_window), GTK_WIDGET(text_view));
+    gtk_container_add(GTK_CONTAINER(window_termins), scrolled_window);
+
+    gtk_widget_show_all(window_termins);
 }
 
 //--------------------------------------//
