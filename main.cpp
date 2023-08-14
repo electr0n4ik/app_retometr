@@ -1,26 +1,12 @@
 #include "pugixml.hpp"
 #include "gtk/gtk.h"
 #include "gdk/gdk.h"
-
-// #include <xlsxwriter.h>
 #include <xlnt/xlnt.hpp>
-
 #include <glib.h>
 #include <gio/gio.h> // Для использования GBytes
 #include <iostream>
 #include <filesystem>
 #include <vector>
-// #include <sstream>
-// #include <fstream>
-// #include <string>
-
-
-// #include <ctime>
-// #include <cstdio>
-// #include <cstdlib>
-// #include <iomanip>
-// #include <chrono>
-// #include <ctime>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -32,6 +18,14 @@
 #define make_dir(dir) mkdir(dir, 0777)
 #endif
 
+// 1. Заменить тестовые кнопки;
+// 2. Наполнить раздел "Помощь";
+// 3. Закрепить верхнюю половину;
+// 4. Добавить полосу загрузки при выполнении операций;
+// 5. (Окно предупреждения начала выполенния операции и уведомление об окончании операции);
+// 6. Сделать ревью и добавить док-ю;
+// 7. Тест на Windows 10.
+
 GtkBuilder *builder;
 //--------------------------------------//
 // Создание некоторых объектов главного окна
@@ -41,18 +35,16 @@ GtkWidget *main_paned1;
 GtkWidget *fixed1;
 GtkWidget *fixed2;
 
+GtkWidget *open_item;
 
 //--------------------------------------//
 // Получаем тестовый label
-GtkWidget *label1;
 GtkWidget *labelabout;
 
 //--------------------------------------//
 // Получаем кнопки
-GtkWidget *button1;
-GtkWidget *button2;
-GtkWidget *button3;
 GtkWidget *button6;
+GtkWidget *export_excel_item;
 
 //--------------------------------------//
 // Получаем таблицу в главном окне
@@ -67,7 +59,6 @@ GtkTreeViewColumn *cx2;
 GtkTreeViewColumn *cx3;
 GtkTreeViewColumn *cx4;
 GtkTreeViewColumn *cx5;
-GtkTreeSelection *selection;
 
 //--------------------------------------//
 // Получаем столбцы в таблице
@@ -111,9 +102,28 @@ const gchar *titles[] = {
 gboolean ASC_sort = FALSE; // Глобальная переменная для отслеживания текущего типа сортировки ASC в порядке возрастания
 gboolean DESC_sort = FALSE; // Глобальная переменная для отслеживания текущего типа сортировки DESC в порядке убывания
 
+
+
 std::string getExecutablePath() {
     return std::filesystem::current_path().string();
 }
+
+
+// Функция для получения директории из пути
+std::string getDirectoryFromPath(const std::string &path) {
+    size_t lastSlashPos = path.find_last_of('/');
+    if (lastSlashPos != std::string::npos) {
+        return path.substr(0, lastSlashPos + 1);
+    }
+    return "";
+}
+
+// Получение пути к исполняемому файлу
+std::string executablePath = getExecutablePath();
+// Получение директории из пути к исполняемому файлу
+std::string executableDirectory = getDirectoryFromPath(executablePath);
+// Формирование пути к файлу glade.glade (абсолютный или относительный относительно исполняемого файла)
+std::string gladeFilePath = executableDirectory + "glade.glade";
 
 // Функция сравнения для сортировки строк (G_TYPE_STRING) в GtkListStore
 static gint compare_func(GtkTreeModel *model, GtkTreeIter *iter1, GtkTreeIter *iter2, gpointer user_data) {
@@ -182,123 +192,7 @@ void on_column_clicked(GtkTreeViewColumn *column, gpointer user_data) {
     gtk_tree_view_column_clicked(column);
 }
 
-// Функция для экспорта данных из GtkListStore в файл Excel
-// void on_button2_clicked(GtkButton *button, gpointer user_data) {
-
-//     GtkTreeModel *model = GTK_TREE_MODEL(liststoreResult);
-//     GtkTreeIter iter;
-
-//     time_t current_time;
-//     time(&current_time);
-    
-//     std::string output_filename_str = "output_" + std::to_string(current_time) + ".xlsx";
-
-//     std::string executable_path = getExecutablePath();
-
-//     // Создаем полный путь к файлу Excel рядом с исполняемым файлом
-//     std::string full_output_path = executable_path + "\\" + output_filename_str;
-
-//     // Записываем содержимое в файл Excel
-//     lxw_workbook *workbook = workbook_new_opt(full_output_path.c_str(), NULL);
-//     lxw_worksheet *worksheet = workbook_add_worksheet(workbook, NULL);
-
-//     int num_rows = gtk_tree_model_iter_n_children(model, NULL);
-//     int num_columns = gtk_tree_model_get_n_columns(model);  
-
-// // Инициализируем массив max_column_width нулями
-//     int max_column_width[num_columns];
-//     memset(max_column_width, 0, sizeof(max_column_width));
-
-//     const char *name_object_exl = name_object.c_str();
-
-//     std::string start_reg_str = formatted_datetime(start_reg);
-//     const char *start_reg_exl = start_reg_str.c_str();
-
-//     const char *schematic_connect_exl = schematic_connect.c_str();
-//     const char *average_interval_exl = average_interval.c_str();
-
-//     std::string end_reg_str = formatted_datetime(start_reg);
-//     const char *end_reg_exl = end_reg_str.c_str();
-
-//     worksheet_write_string(worksheet, 0, 0, "Название объекта: ", NULL);
-//     worksheet_write_string(worksheet, 0, 1, name_object_exl, NULL);
-//     worksheet_write_string(worksheet, 0, 5, "Начало регистрации: ", NULL);
-//     worksheet_write_string(worksheet, 0, 8, start_reg_exl, NULL);
-//     worksheet_write_string(worksheet, 0, 11, "Окончание регистрации: ", NULL);
-//     worksheet_write_string(worksheet, 0, 14, end_reg_exl, NULL);
-
-//     // Добавляем данные во вторую строку и 4-ю колонку
-//     worksheet_write_string(worksheet, 1, 5, "Схема соединения: ", NULL);
-//     worksheet_write_string(worksheet, 1, 9, schematic_connect_exl, NULL);
-
-//     // Добавляем данные во вторую строку и 5-ю колонку, используя числовое значение
-//     worksheet_write_string(worksheet, 1, 11, "Интервал усреднения: ", NULL);
-//     worksheet_write_string(worksheet, 1, 15, average_interval_exl, NULL);
-
-
-//     // Записываем заголовки столбцов в Excel
-//     // for (int col = 0; col < num_columns; col++) {
-//     //     GtkTreeViewColumn *column = gtk_tree_view_get_column(GTK_TREE_VIEW(treeview), col);
-//     //     const gchar *column_name = gtk_tree_view_column_get_title(column);
-//     //     std::cout << column_name << " ";
-//     //     worksheet_write_string(worksheet, 4, col, column_name, NULL);
-//     // }
-
-//     // Записываем заголовки столбцов в Excel
-//     for (int col = 0; col < num_columns; col++) {
-//         const gchar *column_name = titles[col]; //const char *
-//         // std::cout << g_strdup(column_name) << "\t"; // Вывод заголовка в консоль
-//         worksheet_write_string(worksheet, 4, col, g_strdup(column_name), NULL);
-//     }
-
-//     // Записываем данные из GtkListStore в Excel
-//     for (int row = 4; row < num_rows + 4; row++) {
-//         gtk_tree_model_iter_nth_child(model, &iter, NULL, row - 4);
-        
-
-//         for (int col = 0; col < num_columns; col++) {
-//             GValue value = G_VALUE_INIT;
-//             gtk_tree_model_get_value(model, &iter, col, &value);
-//             const gchar *str_value = g_value_get_string(&value);
-            
-                        
-//             if (str_value) {
-                
-//                 worksheet_write_string(worksheet, row + 1, col, g_strdup(str_value), NULL);
-//                 std::cout << g_strdup(str_value) << " ";
-//                 int value_width = g_utf8_strlen(str_value, -1);
-
-//                 if (value_width > max_column_width[col]) {
-//                     max_column_width[col] = value_width;
-//                     worksheet_set_column(worksheet, col, col, value_width + 3, NULL);
-                    
-//                 }
-                
-//             }
-
-//             // g_value_unset(&value);
-//         }
-//     }
-
-//     // Закрываем файл Excel и освобождаем ресурсы
-//     if (workbook_close(workbook) != LXW_NO_ERROR) {
-//         g_printerr("Ошибка при сохранении файла Excel.\n");
-//     }
-
-
-//     //Открывает excel, работает на win10(остальные проверить)
-//     // #ifdef _WIN32
-//     //     // Открываем файл в ассоциированном приложении
-//     //     ShellExecuteA(NULL, "open", full_output_path.c_str(), NULL, NULL, SW_SHOWNORMAL);
-//     // #elif __linux__
-//     //     // Открываем файл через xdg-open
-//     //     if (fork() == 0) {
-//     //         execlp("xdg-open", "xdg-open", full_output_path.c_str(), NULL);
-//     //     }
-//     // #endif
-// }
-
-void on_button2_clicked(GtkButton *button, gpointer user_data) {
+void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
 
     GtkTreeModel *model = GTK_TREE_MODEL(liststoreResult);
     GtkTreeIter iter;
@@ -345,7 +239,7 @@ void on_button2_clicked(GtkButton *button, gpointer user_data) {
     worksheet.cell("O1").value(end_reg_str);
 
     worksheet.cell("F2").value("Схема соединения:");
-    worksheet.cell("J2").value(schematic_connect);
+    worksheet.cell("I2").value(schematic_connect);
     worksheet.cell("L2").value("Интервал усреднения:");
     worksheet.cell("O2").value(average_interval);
 
@@ -391,31 +285,14 @@ void on_button2_clicked(GtkButton *button, gpointer user_data) {
     		execlp("xdg-open", "xdg-open", full_output_path.c_str(), NULL);
     	}
     #endif
-
-}
-
-
-void on_renderer_clicked() {
-    // Устанавливаем новый текст для label1
-    gtk_label_set_text(GTK_LABEL(label1), "Отработал тестовый сигнал!!!");
 }
 
 void create_scrollable_table(GtkButton *button, gpointer user_data) {
-
-
-    main_paned1 = GTK_WIDGET(gtk_builder_get_object(builder, "main_paned1"));
-
-    // Задаем фиксированную позицию для верхней части(исправить)
-    gtk_paned_set_position(GTK_PANED(main_paned1), 200); // Установите здесь желаемую фиксированную высоту
 
     GtkWidget *scrolled2 = gtk_scrolled_window_new(NULL, NULL);
 
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled2),
                                    GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-
-
-// Добавление GtkScrolledWindow в нижний GtkPaned
-    gtk_paned_pack2(GTK_PANED(main_paned1), scrolled2, TRUE, TRUE);
 
     // Установка таблицы в контейнер с прокруткой
     gtk_container_add(GTK_CONTAINER(scrolled2), treeview);
@@ -430,44 +307,17 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
 
 }
 
-
-// Функция для получения директории из пути
-std::string getDirectoryFromPath(const std::string &path) {
-    size_t lastSlashPos = path.find_last_of('/');
-    if (lastSlashPos != std::string::npos) {
-        return path.substr(0, lastSlashPos + 1);
-    }
-    return "";
-}
-
-// // Функция для загрузки содержимого файла в память
-// GBytes *loadFileContents(const gchar *filename) {
-//     GError *error = NULL;
-//     gsize fileSize;
-//     gchar *fileContents = NULL;
-
-//     if (!g_file_get_contents(filename, &fileContents, &fileSize, &error)) {
-//         g_print("Failed to load file '%s': %s\n", filename, error->message);
-//         g_error_free(error);
-//         return NULL;
-//     }
-
-//     GBytes *bytes = g_bytes_new_static(fileContents, fileSize);
-
-//     return bytes;
-// }
-
 //--------------------------------------//
-//обработчик события для кнопки button6
-void on_button6_clicked(GtkButton *button, GtkWidget *label1, gpointer user_data) {
+//обработчик события для кнопки button6, закрывает дочернее окно
+void designations(GtkButton *button, gpointer user_data) {
     gtk_widget_destroy(window2);
     g_object_unref(window2);
 }
 
 //--------------------------------------//
 //обработчик события для кнопки button3
-void on_button3_clicked(GtkButton *button, gpointer user_data) {
-    builder = gtk_builder_new_from_file("glade.glade");
+void about_program(GtkWidget *about_program_submenu, gpointer user_data) {
+    builder = gtk_builder_new_from_file(gladeFilePath.c_str());
     window2 = GTK_WIDGET(gtk_builder_get_object(builder, "window2"));
     gtk_window_set_title(GTK_WINDOW(window2), "О программе");
 
@@ -475,17 +325,30 @@ void on_button3_clicked(GtkButton *button, gpointer user_data) {
     labelabout = GTK_WIDGET(gtk_builder_get_object(builder, "labelabout"));
     button6 = GTK_WIDGET(gtk_builder_get_object(builder, "button6"));
 
-    // Устанавливаем новый текст для label1
-    gtk_label_set_text(GTK_LABEL(label1), "НАЖАЛ НА 3 КНОПКУ!!!");
+    g_signal_connect(button6, "clicked", G_CALLBACK(designations), window2);
 
-    g_signal_connect(button6, "clicked", G_CALLBACK(on_button6_clicked), window2);
+    gtk_widget_show_all(window2);
+}
+
+//--------------------------------------//
+//обработчик события для кнопки button3
+void about_termins(GtkWidget *about_termins_submenu, gpointer user_data) {
+    builder = gtk_builder_new_from_file(gladeFilePath.c_str());
+    window2 = GTK_WIDGET(gtk_builder_get_object(builder, "window2"));
+    gtk_window_set_title(GTK_WINDOW(window2), "О программе");
+
+    fixed2 = GTK_WIDGET(gtk_builder_get_object(builder, "fixed2"));
+    labelabout = GTK_WIDGET(gtk_builder_get_object(builder, "labelabout"));
+    button6 = GTK_WIDGET(gtk_builder_get_object(builder, "button6"));
+
+    g_signal_connect(button6, "clicked", G_CALLBACK(designations), window2);
 
     gtk_widget_show_all(window2);
 }
 
 //--------------------------------------//
 //обработчик события для кнопки button1
-void on_button1_clicked(GtkButton *button, gpointer user_data) {
+void open_file(GtkWidget *open_item, gpointer user_data) {
 
     GtkWidget *dialog1;
 
@@ -516,8 +379,8 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
         // Очищаем список перед добавлением новых строк
         gtk_list_store_clear(liststoreResult);
 
-        // Делаем кнопку активной снова
-        gtk_widget_set_sensitive(button2, TRUE);
+
+        
 
         GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
         folder_path = gtk_file_chooser_get_filename(chooser);
@@ -546,7 +409,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
 
             gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), reinterpret_cast<GtkTreeViewColumn *>(columns[i]));
             
-            // Установка кликабельности заголовков столбцов
+            // Установка кликабельности 
             gtk_tree_view_column_set_clickable(columns[i], TRUE);
             g_signal_connect(columns[i], "clicked", G_CALLBACK(on_column_clicked), NULL);
             
@@ -595,9 +458,7 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
                     resultAttrInBlock.emplace_back(attr.value());
                 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-                // здесь надо реализовать заполнение одной строки
                 // Добавляем новую строку
-
 
                 for (int i = 1; i < numColumns + 1; ++i) {
                     values[i] = g_strdup_printf("%s", resultAttrInBlock[i].c_str());
@@ -645,11 +506,8 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
 //                                   32, values[33],
                                    -1); // Note: The last argument should be -1 to indicate the end of the list.
 
-                // здесь надо реализовать заполнение одной строки
 //-----------------------------------------------------------------------------------------------------------------------------------------
                 resultAttrInBlock.clear();
-
-
             }
 
             if (k == 0) {
@@ -695,13 +553,15 @@ void on_button1_clicked(GtkButton *button, gpointer user_data) {
                 gtk_list_store_set(liststore1, &iter, 2, formattedTimeEnd.c_str(), -1); // Окончание регистрации
                 gtk_list_store_set(liststore1, &iter, 3, schematic_connect.c_str(), -1); // Схема соединения
                 gtk_list_store_set(liststore1, &iter, 4, average_interval.c_str(), -1); // Интервал усреднения
-
             }
             k++;
         }
         g_free(folder_path);
     }
     g_signal_connect(tv1, "row-activated", G_CALLBACK(create_scrollable_table), NULL);
+    // Делаем кнопку меню "Экспорт в Excel" активной снова
+    gtk_widget_set_sensitive(export_excel_item, TRUE);
+
 
     gtk_widget_destroy(dialog1);
 }
@@ -714,124 +574,101 @@ void on_window2_destroy(GtkWidget *widget, gpointer user_data) {
     g_object_unref(builder);
 }
 
+//void open_file(GtkMenuItem *menu_item, gpointer user_data) {
+//    std::cout << "Hello" << " " << menu_item << std::endl;
+//}
 
 //--------------------------------------//
 int main(int argc, char *argv[]) {
+    
+    // Инициализация GTK
+    gtk_init(&argc, &argv);
 
-    while (true) {
-        // Инициализация GTK
-        gtk_init(&argc, &argv);
+    // Загрузка интерфейса из файла glade.glade
+    builder = gtk_builder_new_from_file(gladeFilePath.c_str());
 
-        // Получение пути к исполняемому файлу
-        std::string executablePath = getExecutablePath();
-        // Получение директории из пути к исполняемому файлу
-        std::string executableDirectory = getDirectoryFromPath(executablePath);
-        // Формирование пути к файлу glade.glade (абсолютный или относительный относительно исполняемого файла)
-        std::string gladeFilePath = executableDirectory + "glade.glade";
-
-        // Загрузка интерфейса из файла glade.glade
-        builder = gtk_builder_new_from_file(gladeFilePath.c_str());
-
-        window1 = GTK_WIDGET(gtk_builder_get_object(builder, "window1"));
-        gtk_window_set_title(GTK_WINDOW(window1), "РЕТОМЕТР-М3");
-        fixed1 = GTK_WIDGET(gtk_builder_get_object(builder, "fixed1"));
-
-        //--------------------------------------//
-        label1 = GTK_WIDGET(gtk_builder_get_object(builder, "label1"));
-
-        button1 = GTK_WIDGET(gtk_builder_get_object(builder, "button1"));
-
-        button2 = GTK_WIDGET(gtk_builder_get_object(builder, "button2"));
-        // Делаем кнопку неактивной
-        gtk_widget_set_sensitive(button2, FALSE);
-
-        button3 = GTK_WIDGET(gtk_builder_get_object(builder, "button3"));
-
-        // Создание модели данных
-        liststore1 = GTK_LIST_STORE(gtk_builder_get_object(builder, "liststore1"));
-        tv1 = GTK_TREE_VIEW(gtk_builder_get_object(builder, "tv1"));
-
-        cx1 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx1"));
-        cx2 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx2"));
-        cx3 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx3"));
-        cx4 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx4"));
-        cx5 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx5"));
-//        // Установка фиксированной ширины для третьего столбца
-//        gtk_tree_view_column_set_fixed_width(cx5, 300);
-
-        // Добавление столбцов к таблице
-        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx1);
-        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx2);
-        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx3);
-        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx4);
-        gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx5);
-
-        cr1 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr1"));
-        cr2 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr2"));
-        cr3 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr3"));
-        cr4 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr4"));
-        cr5 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr5"));
-
-        // Получение размера окна
-//        GtkAllocation allocation;
-//        GtkWidget *tv1 = GTK_WIDGET(gtk_builder_get_object(GTK_BUILDER(builder), "tv1"));
-//        gtk_widget_get_allocation(tv1, &allocation);
-//        int height = allocation.height;
-
-        // Вычисление количества строк, достаточного для заполнения окна
-//        int row_height = 0;
-//        GtkTreeModel *model = GTK_TREE_MODEL(liststore1);
-//        GtkTreeIter iter;  // iterators
-//        int row_count = 0;
-//
-//        while (gtk_tree_model_iter_next(model, &iter)) {
-//            GtkTreePath *path = gtk_tree_model_get_path(model, &iter);
-//            GtkTreeView *tv1 = GTK_TREE_VIEW(builder);
-//            GdkRectangle rect;
-//            if (gtk_tree_view_get_background_area(tv1, path, NULL, &rect)) {
-//                row_height = rect.height;
-//            }
-//            gtk_tree_path_free(path);
-//            row_count++;
-//        }
-//        int max_rows = height / row_height + 1;
-        GtkTreeIter iter;
-        // Добавление новых пустых строк в таблицу
-//        for (int i = 1; i < 5; i++) {
-//
-//            gtk_list_store_append(liststore1, &iter);
-//            gtk_list_store_set(liststore1, &iter, 0, "", -1);
-//        }
-
-//        gtk_list_store_append(liststore1, &iter);
-//        gtk_list_store_set(liststore1, &iter, 0, " ", -1);
-//        gtk_list_store_set(liststore1, &iter, 1, " ", -1);
-//        gtk_list_store_set(liststore1, &iter, 2, " ", -1);
-//        gtk_list_store_set(liststore1, &iter, 3, " ", -1);
-//        gtk_list_store_set(liststore1, &iter, 4, " ", -1);
-
-//        selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tv1));
-//        // Установка режима выделения строк
-//        gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
-        // Подписка на сигнал "changed"
-//        g_signal_connect(selection, "row_activated", G_CALLBACK(on_row_activated), NULL);
-
-        // Подключение обработчиков событий
-        g_signal_connect(button1, "clicked", G_CALLBACK(on_button1_clicked), NULL);
-        g_signal_connect(button2, "clicked", G_CALLBACK(on_button2_clicked), window1);
-        g_signal_connect(button3, "clicked", G_CALLBACK(on_button3_clicked), window1);
+    window1 = GTK_WIDGET(gtk_builder_get_object(builder, "window1"));
+    fixed1 = GTK_WIDGET(gtk_builder_get_object(builder, "fixed1"));
+    main_paned1 = GTK_WIDGET(gtk_builder_get_object(builder, "main_paned1"));
         
+    // Создание header bar
+    GtkWidget *header_bar = gtk_header_bar_new();
+    gtk_widget_show(header_bar);
         
+    // Создание собственного виджета для заголовка
+    const gchar* str_title = "РЕТОМЕТР-М3";
+    GtkWidget *custom_title = gtk_label_new(str_title);
+           
+    // Добавление header bar к окну и установка свойств
+    gtk_header_bar_set_title(GTK_HEADER_BAR(header_bar), "РЕТОМЕТР-М3");
+    // Установка header bar как заголовка окна
+    gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header_bar), TRUE);
+    gtk_window_set_titlebar(GTK_WINDOW(window1), header_bar);
+        
+    // Создание меню-бара
+    GtkWidget *menu_bar = gtk_menu_bar_new();
+	
+    // Создание элементов меню
+    GtkWidget *open_item = gtk_menu_item_new_with_label("Загрузить из файла ПКЭ");
+    export_excel_item = gtk_menu_item_new_with_label("Экспорт в Excel");
+    gtk_widget_set_sensitive(export_excel_item, FALSE);
 
-        g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-        g_signal_connect(window2, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+    GtkWidget *help_item = gtk_menu_item_new_with_label("Помощь");
+    // Создание элементов "Помощь" в выпадающем меню
+    GtkWidget *about_termins_subitem = gtk_menu_item_new_with_label("Обозначения");
+    GtkWidget *about_program_subitem = gtk_menu_item_new_with_label("О программе");
+        
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu_bar), open_item);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu_bar), export_excel_item);
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu_bar), help_item);
+        
+    // Создание выпадающего меню в "Помощь"
+    GtkWidget *help_submenu = gtk_menu_new();
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(help_item), help_submenu);
 
-        gtk_builder_connect_signals(builder, nullptr);
-        gtk_widget_show_all(window1);
-        gtk_main();
-        g_object_unref(builder);
+    gtk_menu_shell_append(GTK_MENU_SHELL(help_submenu), about_termins_subitem);
+    gtk_menu_shell_append(GTK_MENU_SHELL(help_submenu), about_program_subitem);
+        
+    // Создание модели данных
+    liststore1 = GTK_LIST_STORE(gtk_builder_get_object(builder, "liststore1"));
+    tv1 = GTK_TREE_VIEW(gtk_builder_get_object(builder, "tv1"));
 
-        if (gtk_main_quit) { break; }
-    }
+    cx1 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx1"));
+    cx2 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx2"));
+    cx3 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx3"));
+    cx4 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx4"));
+    cx5 = GTK_TREE_VIEW_COLUMN(gtk_builder_get_object(builder, "cx5"));
+
+    // Добавление столбцов к таблице
+    gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx1);
+    gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx2);
+    gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx3);
+    gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx4);
+    gtk_tree_view_append_column(GTK_TREE_VIEW(tv1), cx5);
+
+    cr1 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr1"));
+    cr2 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr2"));
+    cr3 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr3"));
+    cr4 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr4"));
+    cr5 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr5"));
+
+    // Добавление меню-бара к header bar
+    gtk_header_bar_pack_start(GTK_HEADER_BAR(header_bar), menu_bar);
+        
+    gtk_paned_pack1(GTK_PANED(main_paned1), header_bar, TRUE, TRUE);
+    	
+    g_signal_connect(G_OBJECT(open_item), "activate", G_CALLBACK(open_file), NULL);
+    g_signal_connect(G_OBJECT(export_excel_item), "activate", G_CALLBACK(export_to_excel), NULL);
+    g_signal_connect(G_OBJECT(about_termins_subitem), "activate", G_CALLBACK(about_termins), NULL);
+    g_signal_connect(G_OBJECT(about_program_subitem), "activate", G_CALLBACK(about_program), NULL);
+        
+    g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+    g_signal_connect(window2, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+        
+    gtk_builder_connect_signals(builder, nullptr);
+    gtk_widget_show_all(window1);
+    gtk_main();
+    g_object_unref(builder);
+
     return EXIT_SUCCESS;
 }
