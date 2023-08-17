@@ -3,11 +3,13 @@
 #include "gdk/gdk.h"
 #include <xlnt/xlnt.hpp>
 #include <glib.h>
-#include <gio/gio.h> // Для использования GBytes
+#include <gio/gio.h>
 #include <iostream>
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <thread>
+#include <atomic>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -19,36 +21,28 @@
 #define make_dir(dir) mkdir(dir, 0777)
 #endif
 
-// 1. Заменить тестовые кнопки; + 
-// 2. Наполнить раздел "Помощь"; +
-// 3. Закрепить верхнюю половину; +
-// 4. Добавить полосу загрузки при выполнении операций;
-// 5. (Окно предупреждения начала выполенния операции и уведомление об окончании операции);
-// 6. Сделать ревью и добавить док-ю;
-// 7. Тест на Windows 10. 
-
+//--------------------------------------//
+// Для получения xml файла
 GtkBuilder *builder;
 //--------------------------------------//
-// Создание некоторых объектов главного окна
+// Создание объектов программы
 GtkWidget *window1;
 GtkWidget *window2;
 GtkWidget *main_paned1;
 GtkWidget *fixed1;
 GtkWidget *fixed2;
-
+GtkWidget *scrolled2;
 GtkWidget *open_item;
-
-//--------------------------------------//
+GtkWidget *dialog1;
+GtkFileChooserAction action;
 // Получаем тестовый label
 GtkWidget *labelabout;
-
-//--------------------------------------//
 // Получаем кнопки
 GtkWidget *button6;
 GtkWidget *export_excel_item;
 
 //--------------------------------------//
-// Получаем таблицу в главном окне
+// таблица в главном окне
 // для вывода информации
 // о загруженных файлах ПКЭ
 GtkWidget *view1;
@@ -60,26 +54,24 @@ GtkTreeViewColumn *cx2;
 GtkTreeViewColumn *cx3;
 GtkTreeViewColumn *cx4;
 GtkTreeViewColumn *cx5;
-
-//--------------------------------------//
-// Получаем столбцы в таблице
+// столбцы в таблице
 GtkCellRenderer *cr1;
 GtkCellRenderer *cr2;
 GtkCellRenderer *cr3;
 GtkCellRenderer *cr4;
 GtkCellRenderer *cr5;
-
+// содержимое таблицы
 std::string name_object;
 std::string start_reg;
 std::string schematic_connect;
 std::string average_interval;
 std::string end_reg;
 
-// Создание таблицы
+//--------------------------------------//
+// создание таблицы для второй половины главного окна
 GtkWidget *treeview;
 GtkCellRenderer *renderer;
 GtkTreeIter iterResult;
-
 GtkListStore *liststoreResult = gtk_list_store_new(33, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
                                                    G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
                                                    G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
@@ -89,9 +81,8 @@ GtkListStore *liststoreResult = gtk_list_store_new(33, G_TYPE_STRING, G_TYPE_STR
                                                    G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
                                                    G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
                                                    G_TYPE_STRING);
-
 gchar *folder_path;
-
+// заголовки столбцов
 const gchar *titles[] = {
                 "Время", "Uab, B", "Ubc, B", "Uca, B", "Ia, A", "Ib, A", "Ic, A",
                 "Ua, B", "Ub, B", "Uc, B", "Pп, Вт", "Pо, Вт", "Pн, Вт", "Qп, Вар",
@@ -100,36 +91,34 @@ const gchar *titles[] = {
                 "△Uy, %", "△UyA, %", "△UyB, %", "△UyC, %"
         };
 
-GtkTreeViewColumn *currentSortColumn = nullptr;
-GtkSortType currentSortDirection = GTK_SORT_ASCENDING;
-GtkTreeSortable *sortable = GTK_TREE_SORTABLE(liststoreResult);
+//GtkTreeViewColumn *currentSortColumn = nullptr;
+//GtkSortType currentSortDirection = GTK_SORT_ASCENDING;
+//GtkTreeSortable *sortable = GTK_TREE_SORTABLE(liststoreResult);
 
-//ProgressBar
+//--------------------------------------//
+//ProgressBar для выбора файлов
 GtkWidget *bar1;
 GtkWidget *button_bar;
 GtkWindow *window_bar;
 GtkWidget *fixed_bar;
 GtkWidget *label_bar;
-
+bool isCanceled = false; // Глобальный флаг для проверки прерывания выполнения
+//ProgressBar для экспорта таблицы
 GtkWidget *bar2;
 GtkWidget *button_bar1;
 GtkWindow *window_bar1;
 GtkWidget *fixed_bar1;
 GtkWidget *label_bar1;
-
-GtkWidget *dialog1;
-
-GtkFileChooserAction action;
-
-bool isCanceled = false; // Глобальный флаг для проверки прерывания выполнения
 bool isCanceled2 = false; // Глобальный флаг для проверки прерывания выполнения
+double progress1 = 0.0;
 
+// Глобальная переменная для отслеживания выполнения операций(не решено)
+//std::atomic<bool> isExporting(false);
 
 //функция выдает строку с путем к папке с файлом исполнения
 std::string getExecutablePath() {
     return std::filesystem::current_path().string();
 }
-
 
 // Функция для получения директории из пути
 std::string getDirectoryFromPath(const std::string &path) {
@@ -395,8 +384,6 @@ void startLoading() {
             }
             k++;
             
-            
-            
             fileCount++;
             progress = static_cast<double>(fileCount) / totalFiles;
             gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(bar1), progress);
@@ -410,19 +397,191 @@ void startLoading() {
                 isCanceled = false;          
                 break; // Выходим из цикла, если флаг isCanceled установлен
             }
+            // Если все файлы обработаны, закрываем окно window_bar
+            if (progress > 0.99) {
+                gtk_widget_destroy(GTK_WIDGET(window_bar));
+            break; 
+            }
 
         }
         g_free(folder_path);
-       
-    // Обновление прогресс-бара
-    if (progress >= 1.0) {
-        gtk_widget_destroy(GTK_WIDGET(window_bar));
-    }
 
     // Разблокировать окно
     gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
     
 }
+
+// void export_to_excel_threaded(gpointer data) {
+
+//     auto args = static_cast<std::tuple<GtkWidget*, gpointer, double&>*>(data);
+//     GtkWidget *export_excel_item = std::get<0>(*args);
+//     gpointer user_data = std::get<1>(*args);
+//     double &progress1 = std::get<2>(*args);
+
+//     // Заблокировать окно
+//     gtk_widget_set_sensitive(GTK_WIDGET(window1), FALSE);
+    
+//     GtkTreeModel *model = GTK_TREE_MODEL(liststoreResult);
+//     GtkTreeIter iter;
+
+//     time_t current_time;
+//     time(&current_time);
+    
+//     std::string output_filename_str = "output_" + std::to_string(current_time) + ".xlsx";
+
+//     std::string executable_path = getExecutablePath();
+
+//     // Создаем полный путь к файлу Excel рядом с исполняемым файлом
+//     std::string full_output_path = executable_path + "\\" + output_filename_str;
+
+//     // Создаем объект для работы с файлом Excel
+//     xlnt::workbook workbook;
+//     xlnt::worksheet worksheet = workbook.active_sheet();
+
+//     int num_rows = gtk_tree_model_iter_n_children(model, NULL);
+//     int num_columns = gtk_tree_model_get_n_columns(model);
+    
+//     // Инициализируем массив max_column_width нулями
+//     int max_column_width[num_columns];
+//     memset(max_column_width, 0, sizeof(max_column_width));
+
+//     std::string start_reg_str = formatted_datetime(start_reg);
+//     std::string end_reg_str = formatted_datetime(end_reg);
+    
+//     worksheet.cell("A1").value("Название объекта:");
+//     worksheet.cell("B1").value(name_object);
+//     worksheet.cell("F1").value("Начало регистрации:");
+//     worksheet.cell("I1").value(start_reg_str);
+//     worksheet.cell("L1").value("Окончание регистрации:");
+//     worksheet.cell("O1").value(end_reg_str);
+
+//     worksheet.cell("F2").value("Схема соединения:");
+//     worksheet.cell("I2").value(schematic_connect);
+//     worksheet.cell("L2").value("Интервал усреднения:");
+//     worksheet.cell("O2").value(average_interval);
+	
+//     // Записываем заголовки столбцов в Excel
+//     for (int col = 0; col < num_columns - 1; col++) {
+//         const gchar *column_name = titles[col];
+//         std::string cell_address = xlnt::cell_reference(col + 1, 4).to_string();
+//         worksheet.cell(cell_address).value(column_name);
+//     }
+
+//     // // Записываем данные из GtkListStore в Excel
+//     for (int row = 4; row < num_rows + 4; row++) {
+
+//         gtk_tree_model_iter_nth_child(model, &iter, NULL, row - 4);
+
+//         for (int col = 0; col < num_columns; col++) {
+//             GValue value = G_VALUE_INIT;
+//             gtk_tree_model_get_value(model, &iter, col, &value);
+//             const gchar *str_value = g_value_get_string(&value);
+
+//             if (str_value) {
+//                 worksheet.cell(col + 1, row + 1).value(g_strdup(str_value));
+//                 int str_lenght = g_utf8_strlen(str_value, -1);
+
+//                 if (str_lenght > max_column_width[col]) {
+//                     max_column_width[col] = str_lenght;
+                    
+//                     // Устанавливаем ширину столбца
+//                     worksheet.column_properties(col + 1).width = str_lenght + 3;
+//                 }
+//             }
+//             if (isCanceled2) {
+//                 break; // Выходим из цикла, если флаг isCanceled установлен
+//             }
+//         }
+//         if (isCanceled2) {
+//             break;
+//         } else {
+
+//         	progress1 = static_cast<double>(row) / num_rows;
+//         	gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(bar2), progress1);
+
+//         	// Обновляем прогресс-бар
+//         	while (gtk_events_pending() && !isCanceled2) {
+//             	gtk_main_iteration();
+//         	}
+        
+//         	if (progress1 >= 0.99) {
+//             	gtk_label_set_text(GTK_LABEL(label_bar1), "Открываем \nсозданную таблицу...");
+//         	}
+            
+//     	}
+        
+//     }
+    
+//     if (isCanceled2) {
+
+//         workbook.remove_sheet(worksheet);
+
+//         // Разблокировать окно
+//         gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
+        
+// 	    isCanceled2 = false;
+//     } 
+
+//     if (progress1 >= 1.0) {
+        
+
+//         isCanceled2 = false;
+        
+//         // Сохраняем файл Excel
+//         workbook.save(full_output_path);
+
+//         isExporting = false;
+    
+//         // Разблокировать окно
+//         gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
+        
+//         //Открывает excel, работает на win10(остальные проверить)
+//         #ifdef _WIN32
+//         	// Открываем файл в ассоциированном приложении
+//     	    ShellExecuteA(NULL, "open", full_output_path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+//             gtk_widget_hide(GTK_WIDGET(window_bar1));
+
+//             // Выводим сообщение об успешном экспорте
+//             GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
+//                                                        GTK_DIALOG_DESTROY_WITH_PARENT,
+//                                                        GTK_MESSAGE_INFO,
+//                                                        GTK_BUTTONS_OK,
+//                                                        "Файл успешно экспортирован как:\n%s", full_output_path.c_str());
+//             gtk_dialog_run(GTK_DIALOG(success_dialog));
+//             gtk_widget_destroy(success_dialog);
+//         #elif __linux__
+//     	    // Открываем файл через xdg-open
+//     	    if (fork() == 0) {
+//     		    execlp("xdg-open", "xdg-open", full_output_path.c_str(), NULL);
+//     	    }
+//             gtk_widget_hide(GTK_WIDGET(window_bar1));
+
+//             // Выводим сообщение об успешном экспорте
+//             GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
+//                                                        GTK_DIALOG_DESTROY_WITH_PARENT,
+//                                                        GTK_MESSAGE_INFO,
+//                                                        GTK_BUTTONS_OK,
+//                                                        "Файл успешно экспортирован как:\n%s", full_output_path.c_str());
+//             gtk_dialog_run(GTK_DIALOG(success_dialog));
+//             gtk_widget_destroy(success_dialog);
+//         #endif
+//     }
+// }
+
+// void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
+//     if (isExporting) {
+//         return; // Уже выполняется экспорт
+//     }
+    
+//     isExporting = true;
+
+//     // Запускаем операцию в отдельном потоке
+
+//     std::tuple<GtkWidget*, gpointer, double&> thread_args(export_excel_item, user_data, progress1);
+//     std::thread export_thread(export_to_excel_threaded, &thread_args);
+
+//     export_thread.detach();
+// }
 
 //--------------------------------------//
 //функция экспортирует данные в таблицу excel формата xlsx
@@ -521,11 +680,10 @@ void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
         	if (progress1 >= 0.99) {
             	gtk_label_set_text(GTK_LABEL(label_bar1), "Открываем \nсозданную таблицу...");
         	}
+            
     	}
         
     }
-    
-    ////////////////////////////второе нажатие вызывает баг
     
     if (isCanceled2) {
 
@@ -538,7 +696,7 @@ void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
     } 
 
     if (progress1 >= 1.0) {
-        gtk_widget_hide(GTK_WIDGET(window_bar1));
+        
 
         isCanceled2 = false;
         
@@ -552,11 +710,31 @@ void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
         #ifdef _WIN32
         	// Открываем файл в ассоциированном приложении
     	    ShellExecuteA(NULL, "open", full_output_path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+            gtk_widget_hide(GTK_WIDGET(window_bar1));
+
+            // Выводим сообщение об успешном экспорте
+            GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
+                                                       GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                       GTK_MESSAGE_INFO,
+                                                       GTK_BUTTONS_OK,
+                                                       "Файл успешно экспортирован как:\n%s", full_output_path.c_str());
+            gtk_dialog_run(GTK_DIALOG(success_dialog));
+            gtk_widget_destroy(success_dialog);
         #elif __linux__
     	    // Открываем файл через xdg-open
     	    if (fork() == 0) {
     		    execlp("xdg-open", "xdg-open", full_output_path.c_str(), NULL);
     	    }
+            gtk_widget_hide(GTK_WIDGET(window_bar1));
+
+            // Выводим сообщение об успешном экспорте
+            GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
+                                                       GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                       GTK_MESSAGE_INFO,
+                                                       GTK_BUTTONS_OK,
+                                                       "Файл успешно экспортирован как:\n%s", full_output_path.c_str());
+            gtk_dialog_run(GTK_DIALOG(success_dialog));
+            gtk_widget_destroy(success_dialog);
         #endif
     }
 }
@@ -651,13 +829,16 @@ void about_termins(GtkWidget *about_termins_submenu, gpointer user_data) {
     gtk_widget_show_all(window_termins);
 }
 
-
-
 //--------------------------------------//
 //функция, которая рисует таблицу в нижней части главного окна
 void create_scrollable_table(GtkButton *button, gpointer user_data) {
 
-    GtkWidget *scrolled2 = gtk_scrolled_window_new(NULL, NULL);
+    // Перед созданием нового GtkScrolledWindow, убедитесь, что treeview не добавлен в другой контейнер
+    if (gtk_widget_get_parent(GTK_WIDGET(treeview)) != NULL) {
+        gtk_container_remove(GTK_CONTAINER(gtk_widget_get_parent(GTK_WIDGET(treeview))), GTK_WIDGET(treeview));
+    }
+
+    scrolled2 = gtk_scrolled_window_new(NULL, NULL);
 
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled2),
                                    GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -675,6 +856,11 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
 //--------------------------------------//
 //обработчик события для кнопки "Загрузить из файла ПКЭ"
 void open_file(GtkWidget *open_item, gpointer user_data) {
+
+    //if (scrolled2 != nullptr) {    
+    //    gtk_container_remove(GTK_CONTAINER(scrolled2), treeview);
+    //    scrolled2 = nullptr; // Установка указателя на nullptr
+    //}
 
     action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
     
