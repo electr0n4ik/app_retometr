@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.38.2 -->
+<!-- Generated with glade 3.40.0 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <object class="GtkListStore" id="liststore1">
@@ -27,6 +27,7 @@
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkScrolledWindow" id="scrolled1">
+            <property name="height-request">70</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="hscrollbar-policy">never</property>
@@ -35,11 +36,12 @@
             <property name="propagate-natural-height">True</property>
             <child>
               <object class="GtkViewport" id="view1">
+                <property name="height-request">70</property>
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <child>
                   <object class="GtkFixed" id="fixed1">
-                    <property name="height-request">72</property>
+                    <property name="height-request">70</property>
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <child>
@@ -66,7 +68,6 @@
                                 <property name="title" translatable="yes">Название объекта</property>
                                 <property name="expand">True</property>
                                 <property name="clickable">True</property>
-                                <property name="sort-indicator">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr1"/>
                                   <attributes>
@@ -81,7 +82,6 @@
                                 <property name="title" translatable="yes">Начало регистрации</property>
                                 <property name="expand">True</property>
                                 <property name="clickable">True</property>
-                                <property name="sort-indicator">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr2"/>
                                   <attributes>
@@ -96,7 +96,6 @@
                                 <property name="title" translatable="yes">Окончание регистрации</property>
                                 <property name="expand">True</property>
                                 <property name="clickable">True</property>
-                                <property name="sort-indicator">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr3"/>
                                   <attributes>
@@ -111,7 +110,6 @@
                                 <property name="title" translatable="yes">Схема соединения</property>
                                 <property name="expand">True</property>
                                 <property name="clickable">True</property>
-                                <property name="sort-indicator">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr4"/>
                                   <attributes>
@@ -126,7 +124,6 @@
                                 <property name="title" translatable="yes">Интервал усреднения</property>
                                 <property name="expand">True</property>
                                 <property name="clickable">True</property>
-                                <property name="sort-indicator">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr5"/>
                                   <attributes>
@@ -160,7 +157,6 @@
     <property name="height-request">175</property>
     <property name="can-focus">False</property>
     <property name="window-position">center</property>
-    <signal name="destroy" handler="on_window2_destroy" swapped="no"/>
     <child>
       <object class="GtkFixed" id="fixed2">
         <property name="visible">True</property>
@@ -187,7 +183,6 @@
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
-            <signal name="clicked" handler="on_button6_clicked" swapped="no"/>
           </object>
           <packing>
             <property name="x">100</property>
