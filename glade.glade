@@ -51,13 +51,13 @@
                         <child>
                           <object class="GtkTreeView" id="tv1">
                             <property name="visible">True</property>
-                            <property name="can-focus">True</property>
+                            <property name="can-focus">False</property>
                             <property name="model">liststore1</property>
+                            <property name="headers-clickable">False</property>
                             <property name="expander-column">cx1</property>
                             <property name="enable-search">False</property>
                             <property name="search-column">0</property>
                             <property name="show-expanders">False</property>
-                            <property name="rubber-banding">True</property>
                             <property name="enable-grid-lines">both</property>
                             <child internal-child="selection">
                               <object class="GtkTreeSelection"/>
@@ -67,7 +67,6 @@
                                 <property name="resizable">True</property>
                                 <property name="title" translatable="yes">Название объекта</property>
                                 <property name="expand">True</property>
-                                <property name="clickable">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr1"/>
                                   <attributes>
@@ -81,7 +80,6 @@
                                 <property name="resizable">True</property>
                                 <property name="title" translatable="yes">Начало регистрации</property>
                                 <property name="expand">True</property>
-                                <property name="clickable">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr2"/>
                                   <attributes>
@@ -95,7 +93,6 @@
                                 <property name="resizable">True</property>
                                 <property name="title" translatable="yes">Окончание регистрации</property>
                                 <property name="expand">True</property>
-                                <property name="clickable">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr3"/>
                                   <attributes>
@@ -109,7 +106,6 @@
                                 <property name="resizable">True</property>
                                 <property name="title" translatable="yes">Схема соединения</property>
                                 <property name="expand">True</property>
-                                <property name="clickable">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr4"/>
                                   <attributes>
@@ -123,7 +119,6 @@
                                 <property name="resizable">True</property>
                                 <property name="title" translatable="yes">Интервал усреднения</property>
                                 <property name="expand">True</property>
-                                <property name="clickable">True</property>
                                 <child>
                                   <object class="GtkCellRendererText" id="cr5"/>
                                   <attributes>
@@ -194,9 +189,12 @@
   </object>
   <object class="GtkWindow" id="window_bar">
     <property name="can-focus">False</property>
+    <property name="resizable">False</property>
+    <property name="modal">True</property>
     <property name="window-position">center</property>
     <property name="default-width">440</property>
     <property name="default-height">190</property>
+    <property name="destroy-with-parent">True</property>
     <child>
       <object class="GtkFixed" id="fixed_bar">
         <property name="visible">True</property>
@@ -247,9 +245,12 @@
   </object>
   <object class="GtkWindow" id="window_bar1">
     <property name="can-focus">False</property>
+    <property name="resizable">False</property>
+    <property name="modal">True</property>
     <property name="window-position">center</property>
     <property name="default-width">440</property>
     <property name="default-height">190</property>
+    <property name="destroy-with-parent">True</property>
     <child>
       <object class="GtkFixed" id="fixed_bar1">
         <property name="visible">True</property>
