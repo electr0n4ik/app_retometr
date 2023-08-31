@@ -5,21 +5,24 @@
 #include <glib.h>
 #include <gio/gio.h>
 #include <iostream>
+#include <fstream>
 #include <filesystem>
 #include <vector>
 #include <string>
 #include <thread>
 #include <atomic>
-
+#include <locale>
 #ifdef _WIN32
 #include <windows.h>
 #include <direct.h>
+#include <cstdlib>
 #define make_dir(dir) _wmkdir(dir)
 #elif __linux__
 #include <unistd.h>
 #include <sys/stat.h>
 #define make_dir(dir) mkdir(dir, 0777)
 #endif
+
 
 //--------------------------------------//
 // Для получения xml файла
@@ -28,6 +31,7 @@ GtkBuilder *builder;
 // Создание объектов программы
 GtkWidget *window1;
 GtkWidget *window2;
+GtkWidget *window_termins;
 GtkWidget *main_paned1;
 GtkWidget *fixed1;
 GtkWidget *fixed2;
@@ -117,6 +121,7 @@ void toggle_sort_order(GtkTreeViewColumn *column, gpointer data) {
 
 //функция выдает строку с путем к папке с файлом исполнения
 std::string getExecutablePath() {
+    SetConsoleOutputCP(CP_UTF8);
     return std::filesystem::current_path().string();
 }
 
@@ -302,9 +307,17 @@ void startLoading() {
         gtk_tree_view_set_model(GTK_TREE_VIEW(treeview), GTK_TREE_MODEL(liststoreResult));
         
         for (const auto &entry: std::filesystem::directory_iterator(folder_path)) {
+
+            if (isCanceled) {
+                isCanceled = false;
+                progress = 0.0;
+                break;
+            }
             
             // проход по всем файлам в папке
-            std::string file_path = entry.path().string();
+            // std::string file_path = entry.path().string();
+            std::filesystem::path file_path = entry.path().string();
+            std::wstring file_path_wide = file_path.wstring();
 
             // Создает объект doc, который будет представлять загруженный XML-документ.
             pugi::xml_document doc;
@@ -313,7 +326,6 @@ void startLoading() {
 
             if (!doc_load || !root.child("Param_Check_PKE") || !root.child("Result_Check_PKE")) {
 
-                std::cerr << "Invalid file: " << file_path << std::endl;
                 fileCount++;
                 progress = static_cast<double>(fileCount) / static_cast<double>(totalFiles);
                 gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(bar1), progress);
@@ -345,28 +357,28 @@ void startLoading() {
             for (pugi::xml_node paramNode = root.child(
                     "Param_Check_PKE"); paramNode; paramNode = paramNode.next_sibling("Param_Check_PKE")) {
 
-                std::ostringstream oss;
-                paramNode.print(oss);
-
-                // сохранение переменных <Param_Check_PKE ... /> в консоль
+                // сохранение переменных <Param_Check_PKE ... /> 
                 for (pugi::xml_attribute attr = paramNode.first_attribute(); attr; attr = attr.next_attribute()) {
-
                     paramAttrInBlock.emplace_back(attr.value());
                 }
                 break;
             }
+            // if (paramAttrInBlock.size() != 6){
+            //     continue;
+            // }
+            
 
             // проход по блокам Result_Check_PKE
             for (pugi::xml_node resultNode = root.child(
                     "Result_Check_PKE"); resultNode; resultNode = resultNode.next_sibling("Result_Check_PKE")) {
-                std::ostringstream oss;
-                resultNode.print(oss);
-
 
                 // все переменные <Result_Check_PKE ... />
                 for (pugi::xml_attribute attr = resultNode.first_attribute(); attr; attr = attr.next_attribute()) {
                     resultAttrInBlock.emplace_back(attr.value());
                 }
+                // if (resultAttrInBlock.size() != 32){
+                //     continue;
+                // }
 
                 for (int i = 1; i < numColumns + 1; ++i) {
                     values[i] = g_strdup_printf("%s", resultAttrInBlock[i].c_str());
@@ -437,9 +449,7 @@ void startLoading() {
             gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(bar1), progress);
             gtk_main_iteration();
 
-            if (isCanceled) {          
-                isCanceled = false;
-            }
+            
             // Если все файлы обработаны, закрываем окно window_bar
             if (progress > 0.99) {
                 gtk_widget_destroy(GTK_WIDGET(window_bar));
@@ -475,194 +485,6 @@ void startLoading() {
     
     }
 }
-
-// void startLoading() {
-//     int flag_work = 0;
-
-//     GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
-//     folder_path = gtk_file_chooser_get_filename(chooser);
-
-//     for (const auto &entry : std::filesystem::directory_iterator(folder_path)) {
-//         if (entry.is_directory() || (entry.path().extension() != ".pke")) {
-//             flag_work = 1;
-//             break;
-//         }
-//     }
-
-//     if (flag_work == 0) {
-//         std::vector<std::string> paramAttrInBlock;
-//         std::vector<std::string> resultAttrInBlock;
-
-//         builder = gtk_builder_new_from_file(gladeFilePath.c_str());
-
-//         window_bar = GTK_WINDOW(gtk_builder_get_object(builder, "window_bar"));
-//         gtk_window_set_title(GTK_WINDOW(window_bar), "Загрузка");
-//         gtk_window_set_resizable(GTK_WINDOW(window_bar), FALSE);
-
-//         fixed_bar = GTK_WIDGET(gtk_builder_get_object(builder, "fixed_bar"));
-//         label_bar = GTK_WIDGET(gtk_builder_get_object(builder, "label_bar"));
-//         button_bar = GTK_WIDGET(gtk_builder_get_object(builder, "button_bar"));
-//         bar1 = GTK_WIDGET(gtk_builder_get_object(builder, "bar1"));
-
-//         int k = 0;
-
-//         gtk_list_store_clear(liststoreResult);
-
-//         int numColumns = 32;
-
-//         treeview = gtk_tree_view_new();
-//         renderer = gtk_cell_renderer_text_new();
-
-//         std::vector<const char *> values(numColumns);
-
-//         GtkTreeViewColumn *columns[numColumns];
-
-//         int totalFiles = std::distance(std::filesystem::directory_iterator(folder_path), std::filesystem::directory_iterator{});
-//         int fileCount = 0;
-//         progress = 0.0;
-
-//         gtk_widget_destroy(dialog1);
-//         gtk_widget_show_all(GTK_WIDGET(window_bar));
-
-//         g_signal_connect(button_bar, "clicked", G_CALLBACK(cancelLoading), NULL);
-//         g_signal_connect(window_bar, "delete-event", G_CALLBACK(on_delete_event_window_bar), NULL);
-
-//         for (int i = 0; i < numColumns; ++i) {
-//             columns[i] = gtk_tree_view_column_new();
-//             gchar *title = g_strdup_printf("%s", titles[i]);
-//             gtk_tree_view_column_set_title(GTK_TREE_VIEW_COLUMN(columns[i]), title);
-//             g_free(title);
-
-//             gtk_tree_view_column_pack_start(GTK_TREE_VIEW_COLUMN(columns[i]), renderer, TRUE);
-//             gtk_tree_view_column_add_attribute(GTK_TREE_VIEW_COLUMN(columns[i]), renderer, "text", i);
-
-//             gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), reinterpret_cast<GtkTreeViewColumn *>(columns[i]));
-//             gtk_tree_view_column_set_clickable(columns[i], TRUE);
-//             gtk_tree_view_column_set_sort_column_id(columns[i], i);
-//             g_signal_connect(columns[i], "clicked", G_CALLBACK(toggle_sort_order), NULL);
-//         }
-
-//         gtk_tree_view_set_model(GTK_TREE_VIEW(treeview), GTK_TREE_MODEL(liststoreResult));
-
-//         for (const auto &entry: std::filesystem::directory_iterator(folder_path)) {
-//             std::string file_path = entry.path().string();
-//             pugi::xml_document doc;
-//             pugi::xml_node root = doc.child("RM3_ПКЭ");
-
-//             for (pugi::xml_node paramNode = root.child("Param_Check_PKE"); paramNode; paramNode = paramNode.next_sibling("Param_Check_PKE")) {
-//                 std::ostringstream oss;
-//                 paramNode.print(oss);
-
-//                 for (pugi::xml_attribute attr = paramNode.first_attribute(); attr; attr = attr.next_attribute()) {
-//                     paramAttrInBlock.emplace_back(attr.value());
-//                 }
-//                 break;
-//             }
-
-//             for (pugi::xml_node resultNode = root.child("Result_Check_PKE"); resultNode; resultNode = resultNode.next_sibling("Result_Check_PKE")) {
-//                 std::ostringstream oss;
-//                 resultNode.print(oss);
-
-//                 for (pugi::xml_attribute attr = resultNode.first_attribute(); attr; attr = attr.next_attribute()) {
-//                     resultAttrInBlock.emplace_back(attr.value());
-//                 }
-
-//                 for (int i = 1; i < numColumns + 1; ++i) {
-//                     values[i] = g_strdup_printf("%s", resultAttrInBlock[i].c_str());
-//                 }
-
-//                 gtk_list_store_append(liststoreResult, &iterResult);
-//                 gtk_list_store_set(liststoreResult, &iterResult,
-//                     0, formatted_datetime(values[1]).c_str(),
-//                     1, values[2], 2, values[3], 3, values[4],
-//                     4, values[5], 5, values[6], 6, values[7],
-//                     7, values[8], 8, values[9], 9, values[10],
-//                     10, values[11], 11, values[12], 12, values[13],
-//                     13, values[14], 14, values[15], 15, values[16],
-//                     16, values[17], 17, values[18], 18, values[19],
-//                     19, values[20], 20, values[21], 21, values[22],
-//                     22, values[23], 23, values[24], 24, values[25],
-//                     25, values[26], 26, values[27], 27, values[28],
-//                     28, values[29], 29, values[30], 30, values[31],
-//                     31, values[32], -1);
-//                 resultAttrInBlock.clear();
-//             }
-
-//             if (k == 0) {
-//                 gtk_list_store_clear(liststore1);
-
-//                 name_object = paramAttrInBlock[2];
-//                 start_reg = paramAttrInBlock[0];
-//                 std::string formattedTimeStart = formatted_datetime(paramAttrInBlock[0]);
-
-//                 end_reg = paramAttrInBlock[1];
-//                 std::string formattedTimeEnd = formatted_datetime(paramAttrInBlock[1]);
-
-//                 schematic_connect = paramAttrInBlock[5];
-//                 int number = std::stoi(schematic_connect);
-//                 switch (number) {
-//                     case 1:
-//                         schematic_connect = "1-ф 2-пр";
-//                         break;
-//                     case 2:
-//                         schematic_connect = "3-ф 3-пр";
-//                         break;
-//                     case 3:
-//                         schematic_connect = "3-ф 4-пр";
-//                         break;
-//                 }
-
-//                 average_interval = paramAttrInBlock[3] + " мсек";
-
-//                 GtkTreeIter iter;
-//                 gtk_list_store_append(liststore1, &iter);
-//                 gtk_list_store_set(liststore1, &iter, 0, name_object.c_str(), -1);
-//                 gtk_list_store_set(liststore1, &iter, 1, formattedTimeStart.c_str(), -1);
-//                 gtk_list_store_set(liststore1, &iter, 2, formattedTimeEnd.c_str(), -1);
-//                 gtk_list_store_set(liststore1, &iter, 3, schematic_connect.c_str(), -1);
-//                 gtk_list_store_set(liststore1, &iter, 4, average_interval.c_str(), -1);
-//             }
-
-//             k++;
-//             fileCount++;
-//             progress = static_cast<double>(fileCount) / static_cast<double>(totalFiles);
-
-//             gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(bar1), progress);
-//             gtk_main_iteration();
-
-//             if (isCanceled) {
-//                 isCanceled = false;
-//             }
-
-//             if (progress > 0.99) {
-//                 gtk_widget_destroy(GTK_WIDGET(window_bar));
-//                 gtk_widget_set_sensitive(GTK_WIDGET(export_excel_subitem), TRUE);
-//             }
-
-//             g_free(folder_path);
-//             gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
-//             isCanceled = false;
-//         }
-//     } else {
-//         int success_dialog_ok;
-//         GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(dialog1),
-//             GTK_DIALOG_DESTROY_WITH_PARENT,
-//             GTK_MESSAGE_INFO,
-//             GTK_BUTTONS_OK,
-//             "Неверная папка!");
-
-//         success_dialog_ok = gtk_dialog_run(GTK_DIALOG(success_dialog));
-
-//         if (success_dialog_ok) {
-//             gtk_widget_destroy(success_dialog);
-//             gtk_widget_destroy(dialog1);
-//             gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
-//         }
-
-//         return;
-//     }
-// }
-
 
 void show_folder_dialog() {
 
@@ -710,10 +532,36 @@ void open_file(GtkWidget *open_item, gpointer user_data) {
     gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
 }
 
+
+
+
+
+
+
+namespace fs = std::filesystem;
+
+bool copyFile(const std::string& sourcePath, const std::string& destinationPath) {
+    try {
+        fs::copy(sourcePath, destinationPath, fs::copy_options::overwrite_existing);
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "An error occurred: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+
+
+
+
+
+
+
+
 //--------------------------------------//
 //функция экспортирует данные в таблицу excel формата xlsx
 void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
-    
+    SetConsoleOutputCP(CP_UTF8);
     double progress1 = 0.0; // Инициализируем прогресс
     // Заблокировать окно
     gtk_widget_set_sensitive(GTK_WIDGET(window1), FALSE);
@@ -744,12 +592,13 @@ void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
     time_t current_time;
     time(&current_time);
     
-    std::string output_filename_str = "output_" + std::to_string(current_time) + ".xlsx";
+    std::string output_filename_str = "retometr_" + std::to_string(current_time) + ".xlsx";
 
     std::string executable_path = getExecutablePath();
 
     // Создаем полный путь к файлу Excel рядом с исполняемым файлом
     std::string full_output_path = executable_path + "\\" + output_filename_str;
+    std::cout << full_output_path;
 
 //////////////////НАЧАЛО РАБОТЫ XLNT/////////////////
     // Создаем объект для работы с файлом Excel
@@ -791,15 +640,11 @@ void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
         
         gtk_tree_model_iter_nth_child(model, &iter, NULL, row - 4);
 
-        std::cout << " new str" << std::endl;
-
         for (int col = 0; col < num_columns; col++) {
             
             GValue value = G_VALUE_INIT;
             gtk_tree_model_get_value(model, &iter, col, &value);
             const gchar *str_value = g_value_get_string(&value);
-
-            std::cout << str_value << " - str value." << std::endl;
 
             try {
 
@@ -820,8 +665,6 @@ void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
             } catch (const std::exception &e) {
                     // Вместо выброса исключения, записываем ноль
                     worksheet.cell(col + 1, row + 1).value("0");
-                    // Выводим сообщение об ошибке
-                    std::cout << "Ошибка при записи данных в ячейку: " << e.what() << std::endl;
             }
 
 
@@ -849,70 +692,93 @@ void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
         	
             }
 
-        	// if (progress1 >= 0.99) {
-            // 	gtk_label_set_text(GTK_LABEL(label_bar1), "Открываем \nсозданную таблицу...");
-        	// }
+        	if (progress1 >= 0.99) {
+            	gtk_label_set_text(GTK_LABEL(label_bar1), "Открываем \nсозданную таблицу...");
+        	}
+
+            if (isCanceled2) {
+
+                workbook.remove_sheet(worksheet);
+
+                // Разблокировать окно
+                gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
+                
+                isCanceled2 = false;
+            } 
     	}
-        
-
     }
 
-    std::cout << " White!" << std::endl;
-
-    // if (isCanceled2) {
-
-    //     workbook.remove_sheet(worksheet);
-
-    //     // Разблокировать окно
-    //     gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
-        
-	//     isCanceled2 = false;
-    // } 
-
-    if (progress1 >= 1.0) {
-        
-
-        isCanceled2 = false;
-        std::cout << "progress = 1" << std::endl;
-        // Сохраняем файл Excel
-        workbook.save(full_output_path);
     
-        // Разблокировать окно
-        gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
+    if (progress1 >= 1.0) {
 
-        gtk_widget_hide(GTK_WIDGET(window_bar1));
+            isCanceled2 = false;
+            
+            std::string sourceFilePath = "C:\\Program Files\\" + output_filename_str;
+            // workbook.save(getExecutablePath() + "\\" + output_filename_str);
+            // std::vector<std::uint8_t> buffer;
+            
+            
+            
+
+            // std::ofstream output_file(getExecutablePath() + "\\" + output_filename_str, std::ios::binary);
+            // std::cout << getExecutablePath() + "\\" + output_filename_str;
+            workbook.save(output_filename_str);
+            std::cout << output_filename_str << " OK";
+            
+            // std::filesystem::path output_file_path = std::filesystem::path(getExecutablePath()) / output_filename_str;
+
+            
+            // // workbook.save(sourceFilePath);
+
+            // // std::cout << getExecutablePath() << " - getExecutablePath() " << std::endl;
+            // // std::cout << sourceFilePath << " - sourceFilePath " << std::endl;
+
+
+
+            // if (copyFile(output_file_path, getExecutablePath() + "\\" + output_filename_str)) {
+            //     std::cout << " File copied successfully. " << std::endl;
+            // } else {
+            //     std::cout << " File copy failed. " << std::endl;
+            // }
+
+            gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
+            
+     
         
-        // //Открывает excel, работает на win10(остальные проверить)
-        // #ifdef _WIN32
-        // 	// Открываем файл в ассоциированном приложении
-    	//     ShellExecuteA(NULL, "open", full_output_path.c_str(), NULL, NULL, SW_SHOWNORMAL);
-        //     gtk_widget_hide(GTK_WIDGET(window_bar1));
+        
+        #ifdef _WIN32
+        	// Открываем файл в ассоциированном приложении
+    	    // ShellExecuteA(NULL, "open", full_output_path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+            
+            ShellExecuteA(NULL, "open", output_filename_str.c_str(), NULL, NULL, SW_SHOWNORMAL);
+            gtk_widget_destroy(GTK_WIDGET(window_bar1));
 
-        //     // Выводим сообщение об успешном экспорте
-        //     GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
-        //                                                GTK_DIALOG_DESTROY_WITH_PARENT,
-        //                                                GTK_MESSAGE_INFO,
-        //                                                GTK_BUTTONS_OK,
-        //                                                "Файл успешно экспортирован как:\n%s", full_output_path.c_str());
-        //     gtk_dialog_run(GTK_DIALOG(success_dialog));
-        //     gtk_widget_destroy(success_dialog);
-        // #elif __linux__
-    	//     // Открываем файл через xdg-open
-    	//     if (fork() == 0) {
-    	// 	    execlp("xdg-open", "xdg-open", full_output_path.c_str(), NULL);
-    	//     }
-        //     gtk_widget_hide(GTK_WIDGET(window_bar1));
+            // Выводим сообщение об успешном экспорте
+            GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
+                                                       GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                       GTK_MESSAGE_INFO,
+                                                       GTK_BUTTONS_OK,
+                                                       "Файл успешно экспортирован как:\n%s", output_filename_str.c_str());
+            gtk_dialog_run(GTK_DIALOG(success_dialog));
+            gtk_widget_destroy(success_dialog);
+        #elif __linux__
+    	    // Открываем файл через xdg-open
+    	    if (fork() == 0) {
+    		    execlp("xdg-open", "xdg-open", full_output_path.c_str(), NULL);
+    	    }
+            gtk_widget_hide(GTK_WIDGET(window_bar1));
 
-        //     // Выводим сообщение об успешном экспорте
-        //     GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
-        //                                                GTK_DIALOG_DESTROY_WITH_PARENT,
-        //                                                GTK_MESSAGE_INFO,
-        //                                                GTK_BUTTONS_OK,
-        //                                                "Файл успешно экспортирован как:\n%s", full_output_path.c_str());
-        //     gtk_dialog_run(GTK_DIALOG(success_dialog));
-        //     gtk_widget_destroy(success_dialog);
-        // #endif
+            // Выводим сообщение об успешном экспорте
+            GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
+                                                       GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                       GTK_MESSAGE_INFO,
+                                                       GTK_BUTTONS_OK,
+                                                       "Файл успешно экспортирован как:\n%s", full_output_path.c_str());
+            gtk_dialog_run(GTK_DIALOG(success_dialog));
+            gtk_widget_destroy(success_dialog);
+        #endif
     }
+    
 }
 
 //--------------------------------------//
@@ -941,7 +807,7 @@ void about_program(GtkWidget *about_program_submenu, gpointer user_data) {
 //--------------------------------------//
 //обработчик события для кнопки "Обозначения"
 void about_termins(GtkWidget *about_termins_submenu, gpointer user_data) {
-    GtkWidget *window_termins = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    window_termins = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     
     gtk_window_set_title(GTK_WINDOW(window_termins), "Обозначения");
     gtk_window_set_default_size(GTK_WINDOW(window_termins), 600, 700);
@@ -1005,9 +871,23 @@ void about_termins(GtkWidget *about_termins_submenu, gpointer user_data) {
     gtk_widget_show_all(window_termins);
 }
 
+void on_main_window_destroy(GtkWidget *widget, gpointer data) {
+    // Закрыть остальные окна, например:
+    gtk_widget_destroy(GTK_WIDGET(window_bar));
+    gtk_widget_destroy(GTK_WIDGET(window_bar1));
+    gtk_widget_destroy(GTK_WIDGET(dialog1));
+    gtk_widget_destroy(GTK_WIDGET(window2));
+    gtk_widget_destroy(GTK_WIDGET(window_termins));
+
+    // Завершить выполнение программы
+    gtk_main_quit();
+}
+
 //--------------------------------------//
 int main(int argc, char *argv[]) {
-    
+    SetConsoleOutputCP(CP_UTF8);
+
+    std::cout << "тест - " << getExecutablePath() << ". Test";
     // Инициализация GTK
     gtk_init(&argc, &argv);
 
@@ -1079,10 +959,11 @@ int main(int argc, char *argv[]) {
     g_signal_connect(about_termins_subitem, "activate", G_CALLBACK(about_termins), window1);
     g_signal_connect(about_program_subitem, "activate", G_CALLBACK(about_program), window1);
 
-    g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+    // g_signal_connect(window1, "destroy", G_CALLBACK(gtk_main_quit), NULL);
     
     g_signal_connect(tv1, "button-press-event", G_CALLBACK(create_scrollable_table), NULL);
-    // g_signal_connect(dialog1, "response", G_CALLBACK(on_delete_event_dialog1), NULL);
+    g_signal_connect(window1, "destroy", G_CALLBACK(on_main_window_destroy), NULL);
+
         
     gtk_builder_connect_signals(builder, nullptr);
     gtk_widget_show_all(window1);
