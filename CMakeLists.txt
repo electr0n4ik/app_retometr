@@ -13,22 +13,18 @@ set(CMAKE_BUILD_TYPE Debug)
 
 if(UNIX AND NOT APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
-    target_link_libraries(app_retometr PRIVATE -Wl,--no-console) #убирает окно консоли
 endif()
 
 add_executable(app_retometr main.cpp)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 if (WIN32)
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+	add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
+	add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
     target_compile_options(app_retometr PRIVATE -O3)
-    add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-all-symbols")
-    #set_target_properties(app_retometr PROPERTIES WIN32_EXECUTABLE TRUE) #убирает окно консоли
+    set_target_properties(app_retometr PROPERTIES WIN32_EXECUTABLE TRUE) #убирает окно консоли
 endif()
-
-#target_compile_options(app_retometr PRIVATE -g)
 
 target_link_libraries(app_retometr PRIVATE ${GTK3_LIBRARIES})
 target_link_libraries(app_retometr PRIVATE ${PUGIXML_LIBRARIES})
