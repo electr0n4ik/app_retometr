@@ -12,6 +12,7 @@
 #include <thread>
 #include <locale>
 #include <chrono>
+#include <limits.h>
 #ifdef _WIN32
 #include <windows.h>
 #include <direct.h>
@@ -113,8 +114,6 @@ bool isCanceled2 = false;
 double progress = 0.0;
 gboolean descending = FALSE;
 
-namespace fs = std::filesystem;
-
 // Функция для смены порядка сортировки
 void toggle_sort_order(GtkTreeViewColumn *column, gpointer data) {
     descending = !descending;
@@ -122,17 +121,29 @@ void toggle_sort_order(GtkTreeViewColumn *column, gpointer data) {
 
 //функция выдает строку с путем к папке с файлом исполнения
 std::string getExecutablePath() {
-    SetConsoleOutputCP(CP_UTF8);
-    return std::filesystem::current_path().string();
+    #ifdef _WIN32
+        SetConsoleOutputCP(CP_UTF8);
+        return std::filesystem::current_path().string();
+    #elif __linux__
+    	char result[PATH_MAX];
+		ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+		if (count != -1) {
+		    result[count] = '\0';
+		    return std::string(result);
+		} else {
+		    return "";
+		}
+    #endif
+    
 }
 
 // Функция для получения директории из пути
 std::string getDirectoryFromPath(const std::string &path) {
     size_t lastSlashPos = path.find_last_of('/');
-    if (lastSlashPos != std::string::npos) {
-        return path.substr(0, lastSlashPos + 1);
-    }
-    return "";
+	if (lastSlashPos != std::string::npos) {
+	    return path.substr(0, lastSlashPos + 1);
+	}
+	return "";
 }
 
 // Получение пути к исполняемому файлу
@@ -226,20 +237,29 @@ void create_scrollable_table(GtkButton *button, gpointer user_data) {
 
 void startLoading() {
     int flag_work = 0;
+    int totalFiles = 10;
     GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
-    folder_path = gtk_file_chooser_get_filename(chooser);
+
+    #ifdef _WIN32
+        folder_path = gtk_file_chooser_get_filename(chooser);
+    #elif __linux__
+    	const gchar *folder_path1 = gtk_file_chooser_get_filename(chooser);
+    	std::filesystem::path folder_path = std::filesystem::u8path(folder_path1);
+    #endif
     for (const auto &entry : std::filesystem::directory_iterator(folder_path)) {
         if (entry.is_directory() || (entry.path().extension() != ".pke")) {
             flag_work = 1;
+            
             break; // Прерываем цикл при обнаружении неправильных файлов или папок
         }
-    }
-    
+    }	
     if (flag_work == 0) {
+    
         std::vector<std::string> paramAttrInBlock;
         std::vector<std::string> resultAttrInBlock;
         gtk_list_store_clear(liststoreResult);
         builder = gtk_builder_new_from_file(gladeFilePath.c_str());
+        
         window_bar = GTK_WINDOW(gtk_builder_get_object(builder, "window_bar"));
         gtk_window_set_title(GTK_WINDOW(window_bar), "Загрузка");
         fixed_bar = GTK_WIDGET(gtk_builder_get_object(builder, "fixed_bar"));
@@ -247,19 +267,18 @@ void startLoading() {
         button_bar = GTK_WIDGET(gtk_builder_get_object(builder, "button_bar"));
         bar1 = GTK_WIDGET(gtk_builder_get_object(builder, "bar1"));
         int k = 0;
-        GtkFileChooser *chooser = GTK_FILE_CHOOSER(dialog1);
-        folder_path = gtk_file_chooser_get_filename(chooser);
+
         int numColumns = 32;
         treeview = gtk_tree_view_new();
         renderer = gtk_cell_renderer_text_new();
         std::vector<const char *> values(numColumns);
         GtkTreeViewColumn *columns[numColumns];
-        int totalFiles = std::distance(std::filesystem::directory_iterator(folder_path), std::filesystem::directory_iterator{});
+        
+		totalFiles = std::distance(std::filesystem::directory_iterator(folder_path), std::filesystem::directory_iterator{});
+        
         int fileCount = 0;
         progress = 0.0;
         gtk_widget_destroy(dialog1);
-
-        
 
         for (int i = 0; i < numColumns; ++i) {
 
@@ -286,23 +305,15 @@ void startLoading() {
         gtk_widget_show_all(GTK_WIDGET(window_bar));
         g_signal_connect(button_bar, "clicked", G_CALLBACK(cancelLoading), NULL);
         g_signal_connect(window_bar, "delete-event", G_CALLBACK(on_delete_event_window_bar), NULL);
-        
-        
+
         for (const auto &entry: std::filesystem::directory_iterator(folder_path)) {
             
             if (isCanceled) {
-                
                 isCanceled = false;
                 progress = 0.0;
                 break;
             }
-            
-            // проход по всем файлам в папке
-            // std::string file_path = entry.path().string();
-            std::filesystem::path file_path = entry.path().string();
-            std::wstring file_path_wide = file_path.wstring();
-
-            // Создает объект doc, который будет представлять загруженный XML-документ.
+			std::filesystem::path file_path = entry.path().string();
             pugi::xml_document doc;
             auto doc_load = doc.load_file(file_path.c_str());
             pugi::xml_node root = doc.child("RM3_ПКЭ");
@@ -472,20 +483,17 @@ void show_folder_dialog() {
 
 void open_file(GtkWidget *open_item, gpointer user_data) {
 
-    // Заблокировать главное окно
+	
+
     gtk_widget_set_sensitive(GTK_WIDGET(window1), FALSE);
 
     gint res;   
     show_folder_dialog();
     res = gtk_dialog_run(GTK_DIALOG(dialog1));
-    //g_signal_connect(dialog1, "delete-event", G_CALLBACK(on_delete_event_dialog1), NULL);
 
-    // Если пользователь выбрал папку
     if (res == GTK_RESPONSE_ACCEPT) {
         startLoading(); // Вызываем функцию startLoading и получаем окно прогресса
     }
-    
-    // Если пользователь отменил
     if (res == GTK_RESPONSE_CANCEL) {
         gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
         cancelLoading3();
@@ -495,24 +503,16 @@ void open_file(GtkWidget *open_item, gpointer user_data) {
     if (res == GTK_RESPONSE_DELETE_EVENT){
         cancelLoading3();
     }
-    //gtk_widget_destroy(dialog1); // Освобождаем ресурсы диалогового окна
+    gtk_widget_destroy(dialog1); // Освобождаем ресурсы диалогового окна
     gtk_widget_set_sensitive(GTK_WIDGET(window1), TRUE);
-}
-
-bool copyFile(const std::string& sourcePath, const std::string& destinationPath) {
-    try {
-        fs::copy(sourcePath, destinationPath, fs::copy_options::overwrite_existing);
-        return true;
-    } catch (const std::exception& e) {
-        std::cerr << "An error occurred: " << e.what() << std::endl;
-        return false;
-    }
 }
 
 //--------------------------------------//
 //функция экспортирует данные в таблицу excel формата xlsx
 void export_to_excel(GtkWidget *export_excel_item, gpointer user_data) {
-    SetConsoleOutputCP(CP_UTF8);
+    #ifdef _WIN32
+		SetConsoleOutputCP(CP_UTF8);
+    #endif
     double progress1 = 0.0;
     gtk_widget_set_sensitive(GTK_WIDGET(window1), FALSE);
     builder = gtk_builder_new_from_file(gladeFilePath.c_str());
@@ -743,10 +743,13 @@ void on_main_window_destroy(GtkWidget *widget, gpointer data) {
 
 //--------------------------------------//
 int main(int argc, char *argv[]) {
+    #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    #endif
     gtk_init(&argc, &argv);
     builder = gtk_builder_new_from_file(gladeFilePath.c_str());
     window1 = GTK_WIDGET(gtk_builder_get_object(builder, "window1"));
+    gtk_window_set_title(GTK_WINDOW(window1), "РЕТОМЕТР-М3");
     fixed1 = GTK_WIDGET(gtk_builder_get_object(builder, "fixed1"));
     main_paned1 = GTK_WIDGET(gtk_builder_get_object(builder, "main_paned1"));
     menu_bar = gtk_menu_bar_new();
