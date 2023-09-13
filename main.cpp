@@ -580,9 +580,9 @@ void startLoading() {
 					//std::cout << attr.value();
 				}
 				
-                if(resultAttrInBlock != numColumns){
-                    cancelLoading3();
-                }
+                // if(resultAttrInBlock != numColumns){
+                //     cancelLoading3();
+                // }
 
 				for (int i = 0; i < numColumns + 1; ++i) {
                     values[i] = g_strdup_printf("%s", resultAttrInBlock[i].c_str());
