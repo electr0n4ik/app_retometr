@@ -367,6 +367,24 @@ void startLoading() {
 	    }
     } else 
     {
+        int success_dialog_ok2;
+	// Выводим сообщение
+	GtkWidget *success_dialog2 = gtk_message_dialog_new(GTK_WINDOW(window1),
+		                                GTK_DIALOG_DESTROY_WITH_PARENT,
+		                                GTK_MESSAGE_INFO,
+		                                GTK_BUTTONS_OK,
+		                                "Необходимо выбрать папку с файлами ПКЭ!");
+	gtk_window_set_modal(GTK_WINDOW(success_dialog2), TRUE);
+
+	success_dialog_ok2 = gtk_dialog_run(GTK_DIALOG(success_dialog2));
+
+	if (success_dialog_ok2) 
+	{
+	gtk_widget_destroy(success_dialog2);
+	}
+	std::cout << "2return";
+	dnd_flag = true;
+	
         std::cout << "3return";
         if(dnd_flag) 
         {
@@ -1013,9 +1031,10 @@ static void on_drag_data_received(GtkWidget *widget, GdkDragContext *context, gi
         folder_path = newString;
 
         #else
-        std::cout << "folder_path: " << newString << std::endl;
-		std::cout << "folder_path exists: " << std::filesystem::exists(newString) << std::endl;
-		std::cout << "folder_path is_directory: " << std::filesystem::is_directory(newString) << std::endl;
+            std::cout << "folder_path: " << newString << std::endl;
+	    std::cout << "folder_path exists: " << std::filesystem::exists(newString) << std::endl;
+	    std::cout << "folder_path is_directory: " << std::filesystem::is_directory(newString) << std::endl;
+	    folder_path = newString;
         #endif
 
         if (std::filesystem::is_directory(folder_path)) {
@@ -1023,6 +1042,23 @@ static void on_drag_data_received(GtkWidget *widget, GdkDragContext *context, gi
             std::cout << folder_path << std::endl;
             dnd_flag = false;
             startLoading();
+        } else {
+            int success_dialog_ok;
+                    // Выводим сообщение
+                    GtkWidget *success_dialog = gtk_message_dialog_new(GTK_WINDOW(window1),
+                                                                GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                                GTK_MESSAGE_INFO,
+                                                                GTK_BUTTONS_OK,
+                                                                "Выберите папку с ПКЭ");
+                    gtk_window_set_modal(GTK_WINDOW(success_dialog), TRUE);
+
+                    success_dialog_ok = gtk_dialog_run(GTK_DIALOG(success_dialog));
+
+                    if (success_dialog_ok) 
+                    {
+                        gtk_widget_destroy(success_dialog);
+                    }
+                    std::cout << "2return";
         }
     }
 }
@@ -1077,12 +1113,22 @@ int main(int argc, char *argv[]) {
     cr4 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr4"));
     cr5 = GTK_CELL_RENDERER(gtk_builder_get_object(builder, "cr5"));
     gtk_fixed_put(GTK_FIXED(fixed1), menu_bar, 0, 0);
-
-    GtkTargetEntry target_entries[] = {
-        {const_cast<gchar*>("text/uri-list"), 0, 0}
-    };
-
-    gtk_drag_dest_set(main_paned1, GTK_DEST_DEFAULT_ALL, target_entries, G_N_ELEMENTS(target_entries), GDK_ACTION_COPY);
+	
+	
+    #ifdef _WIN32
+        GtkTargetEntry target_entries[] = {
+            {const_cast<gchar*>("text/uri-list"), 0, 0}
+        };
+        gtk_drag_dest_set(main_paned1, GTK_DEST_DEFAULT_ALL, target_entries, G_N_ELEMENTS(target_entries), GDK_ACTION_COPY);
+    #else
+        //gtk_drag_dest_set(window1, GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
+        gtk_drag_dest_set(main_paned1, GTK_DEST_DEFAULT_ALL, NULL, 0, GDK_ACTION_COPY);
+        gtk_drag_dest_add_text_targets(main_paned1);
+    #endif
+    
+    
+    
+    
     g_signal_connect(main_paned1, "drag-data-received", G_CALLBACK(on_drag_data_received), NULL);
 
     g_signal_connect(open_item_subitem, "activate", G_CALLBACK(open_file), window1);
