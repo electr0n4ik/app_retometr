@@ -1,0 +1,134 @@
+# Set the minimum version of cmake required to build this project
+cmake_minimum_required(VERSION 3.25)
+
+# Thanks to @danger89 and @Ilothar for updating the gist.
+# Set the name and the supported language of the project
+project(app_retometr C CXX)
+
+# Use the package PkgConfig to detect GTK+ headers/library files
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+# pkg_check_modules(GDK_PIXBUF REQUIRED gdk-pixbuf-2.0)
+# pkg_check_modules(PUGIXML REQUIRED pugixml)
+# pkg_check_modules(GLIB REQUIRED glib-2.0)
+# pkg_check_modules(XLNT REQUIRED xlnt)
+
+add_executable(app_retometr main.cpp)
+
+
+target_link_libraries(app_retometr PRIVATE ${GTK3_LIBRARIES})
+# target_link_libraries(app_retometr PRIVATE ${PUGIXML_LIBRARIES})
+# target_link_libraries(app_retometr PRIVATE ${GLIB_LIBRARIES})
+# target_link_libraries(app_retometr PRIVATE ${XLNT_LIBRARIES})
+# target_link_libraries(app_retometr PRIVATE ${GDK_PIXBUF_LIBRARIES})
+
+
+target_include_directories(app_retometr PRIVATE ${GTK3_INCLUDE_DIRS})
+# target_include_directories(app_retometr PRIVATE ${PUGIXML_INCLUDE_DIRS})
+# target_include_directories(app_retometr PRIVATE ${GLIB_INCLUDE_DIRS})
+# target_include_directories(app_retometr PRIVATE ${XLNT_INCLUDE_DIRS})
+# target_include_directories(app_retometr PRIVATE ${GDK_PIXBUF_INCLUDE_DIRS})
+
+# target_link_directories(app_retometr PRIVATE ${GTK3_LIBRARY_DIRS})
+# target_link_directories(app_retometr PRIVATE ${PUGIXML_LIBRARY_DIRS})
+# target_link_directories(app_retometr PRIVATE ${GLIB_LIBRARY_DIRS})
+# target_link_directories(app_retometr PRIVATE ${XLNT_LIBRARY_DIRS})
+# target_link_directories(app_retometr PRIVATE ${GDK_PIXBUF_LIBRARY_DIRS})
+
+# target_compile_options(app_retometr PRIVATE ${GTK3_CFLAGS_OTHER})
+# target_compile_options(app_retometr PRIVATE ${PUGIXML_CFLAGS_OTHER})
+# target_compile_options(app_retometr PRIVATE ${GLIB_CFLAGS_OTHER})
+# target_compile_options(app_retometr PRIVATE ${XLNT_CFLAGS_OTHER})
+# target_compile_options(app_retometr PRIVATE ${GDK_PIXBU_CFLAGS_OTHER})
+
+
+# if(UNIX AND NOT APPLE)
+#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
+#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
+#     target_link_libraries(app_retometr PRIVATE -Wl,--no-console) #убирает окно консоли
+# endif()
+
+# if (WIN32)
+#     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-all-symbols")
+#     set_target_properties(app_retometr PROPERTIES WIN32_EXECUTABLE TRUE) #убирает окно консоли
+# endif()
+
+# file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/glade.glade
+#         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/glade.glade)
+
+install(TARGETS app_retometr RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+include(InstallRequiredSystemLibraries)
+include(GNUInstallDirs)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/FixBundle.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/FixBundle.cmake
+    @ONLY
+    )
+    
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/glade.glade
+    ${CMAKE_CURRENT_BINARY_DIR}/glade.glade
+    @ONLY
+    )
+INCLUDE (CPackDetectArch)
+SET (CONTACT "backbone@backbone.ws")
+SET (LICENSE "LGPLv3+")
+SET (WIN32_UNINSTALL_NAME "LAvBundl") # <= 8 symbols for the name
+SET (CPACK_NSIS_MENU_LINKS "https://redmine.backbone.ws/projects/laview/wiki"
+                           "Homepage for ${PROJECT_DESCRIPTION}")
+SET (ARCH 64)
+SET (CPACK_PACKAGE_EXECUTABLES "..\\\\win${ARCH}\\\\bundle\\\\bin\\\\laview-desktop-1;LAview Desktop")
+SET (CPACK_NSIS_INSTALLED_ICON_NAME ..\\\\win${ARCH}\\\\bundle\\\\bin\\\\laview-desktop-1.exe)
+SET (CPACK_CREATE_DESKTOP_LINKS "..\\\\win${ARCH}\\\\bundle\\\\bin\\\\laview-desktop-1")
+
+# required dlls/executables
+FILE (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bundle/bin)
+FOREACH (binname gspawn-win${ARCH}-helper.exe perl.exe perl522.dll
+         libatk-1.0-0.dll libbz2-1.dll libcairo-2.dll libcairo-gobject-2.dll
+         libcroco-0.6-3.dll libepoxy-0.dll
+         libexpat-1.dll libffi-6.dll libfontconfig-1.dll libfreetype-6.dll
+         libgcc_s_seh-1.dll libgcc_s_dw2-1.dll
+         libgdk_pixbuf-2.0-0.dll libgdk-3-0.dll libgee-0.8-2.dll libgio-2.0-0.dll libglib-2.0-0.dll
+         libgmodule-2.0-0.dll libgobject-2.0-0.dll libgraphite2.dll libgtk-3-0.dll libharfbuzz-0.dll
+         libiconv-2.dll libintl-8.dll liblzma-5.dll libpango-1.0-0.dll libpangocairo-1.0-0.dll libpangoft2-1.0-0.dll
+         libpangowin32-1.0-0.dll libpcre-1.dll libpixman-1-0.dll
+         libpng16-16.dll librsvg-2-2.dll libstdc++-6.dll
+         libwinpthread-1.dll libxml2-2.dll zlib1.dll)
+  EXECUTE_PROCESS (COMMAND cp /mingw${ARCH}/bin/${binname} ${CMAKE_BINARY_DIR}/bundle/bin)
+ENDFOREACH (binname)
+
+# required libraries
+FILE (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bundle/lib)
+FOREACH (dirname perl5)
+  EXECUTE_PROCESS (COMMAND cp -r /mingw${ARCH}/lib/${dirname} ${CMAKE_BINARY_DIR}/bundle/lib)
+ENDFOREACH (dirname)
+
+# required resources
+SET (adwaita_path share/icons/Adwaita)
+FILE (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bundle/${adwaita_path})
+FOREACH (dirname 16x16 24x24)
+  EXECUTE_PROCESS (COMMAND cp -r /mingw${ARCH}/${adwaita_path}/${dirname} ${CMAKE_BINARY_DIR}/bundle/${adwaita_path})
+ENDFOREACH (dirname)
+SET (hicolor_path share/icons/hicolor)
+FILE (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bundle/${hicolor_path})
+EXECUTE_PROCESS (COMMAND cp /mingw${ARCH}/${hicolor_path}/index.theme ${CMAKE_BINARY_DIR}/bundle/${hicolor_path})
+FILE (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bundle/share/glib-2.0/schemas)
+EXECUTE_PROCESS (COMMAND cp /mingw${ARCH}/share/glib-2.0/schemas/gschemas.compiled
+                            ${CMAKE_BINARY_DIR}/bundle/share/glib-2.0/schemas)
+EXECUTE_PROCESS (COMMAND cp -r /mingw${ARCH}/lib/gdk-pixbuf-2.0 ${CMAKE_BINARY_DIR}/bundle/lib)
+
+# locales
+FILE (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bundle/share/locale)
+FOREACH (lang de ru)
+  SET (localedir share/locale/${lang}/LC_MESSAGES)
+  FILE (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bundle/${localedir})
+  FOREACH (libname gtk30)
+    EXECUTE_PROCESS (COMMAND cp /mingw${ARCH}/${localedir}/${libname}.mo ${CMAKE_BINARY_DIR}/bundle/${localedir})
+  ENDFOREACH (libname)
+ENDFOREACH (lang)
+
+INSTALL (DIRECTORY ${CMAKE_BINARY_DIR}/bundle DESTINATION "win${ARCH}")
+
+INCLUDE (CPackCommonRules)
+

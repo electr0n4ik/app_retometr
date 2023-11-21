@@ -1,0 +1,61 @@
+cmake_minimum_required(VERSION 3.25)
+
+project(app_retometr)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+pkg_check_modules(GDK_PIXBUF REQUIRED gdk-pixbuf-2.0)
+pkg_check_modules(PUGIXML REQUIRED pugixml)
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+pkg_check_modules(XLNT REQUIRED xlnt)
+
+set(CMAKE_CXX_STANDARD 17)
+set(BUILD_SHARED_LIBS OFF)# чтобы собрать библиотеки
+#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+#set(APP_ICON "${CMAKE_SOURCE_DIR}/app_retometr.png")
+
+add_executable(app_retometr main.cpp)
+#add_executable(app_retometr WIN32 ${APP_ICON} main.cpp)
+
+target_include_directories(app_retometr PUBLIC ${GTK3_INCLUDE_DIRS})
+target_include_directories(app_retometr PUBLIC ${PUGIXML_INCLUDE_DIRS})
+target_include_directories(app_retometr PUBLIC ${GLIB_INCLUDE_DIRS})
+target_include_directories(app_retometr PUBLIC ${XLNT_INCLUDE_DIRS})
+target_include_directories(app_retometr PUBLIC ${GDK_PIXBUF_INCLUDE_DIRS})
+
+target_link_directories(app_retometr PUBLIC ${GTK3_LIBRARY_DIRS})
+target_link_directories(app_retometr PUBLIC ${PUGIXML_LIBRARY_DIRS})
+target_link_directories(app_retometr PUBLIC ${GLIB_LIBRARY_DIRS})
+target_link_directories(app_retometr PUBLIC ${XLNT_LIBRARY_DIRS})
+target_link_directories(app_retometr PUBLIC ${GDK_PIXBUF_LIBRARY_DIRS})
+
+target_link_libraries(app_retometr PUBLIC ${GTK3_LIBRARIES})
+target_link_libraries(app_retometr PUBLIC ${PUGIXML_LIBRARIES})
+target_link_libraries(app_retometr PUBLIC ${GLIB_LIBRARIES})
+target_link_libraries(app_retometr PUBLIC ${XLNT_LIBRARIES})
+target_link_libraries(app_retometr PUBLIC ${GDK_PIXBUF_LIBRARIES})
+target_link_libraries(app_retometr PUBLIC xlnt)
+target_link_libraries(app_retometr PUBLIC stdc++)
+
+if(UNIX AND NOT APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
+endif()
+
+if (WIN32)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-all-symbols")
+endif()
+
+if (WIN32)
+    set_target_properties(app_retometr PROPERTIES WIN32_EXECUTABLE TRUE) #убирает окно консоли
+endif()
+
+if (UNIX)
+    target_link_libraries(app_retometr PRIVATE -Wl,--no-console) #убирает окно консоли
+endif()
+
+install(TARGETS app_retometr DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+# Копирование файлов в директорию сборки
+file(COPY ${CMAKE_SOURCE_DIR}/data/bin/ DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/glade.glade DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${GDK_PIXBUF_MODULEDIR} DESTINATION ${CMAKE_BINARY_DIR})

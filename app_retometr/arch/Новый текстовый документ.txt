@@ -1,0 +1,36 @@
+FixBundle.cmake.in
+
+include(BundleUtilities)
+
+set(bundle
+   "${CMAKE_INSTALL_PREFIX}/@CMAKE_INSTALL_BINDIR@/hello@CMAKE_EXECUTABLE_SUFFIX@")
+
+# Set other_libs to a list of full path names to additional
+# libraries that cannot be reached by dependency analysis.
+# (Dynamically loaded PlugIns, for example.)
+set(other_libs "")
+
+# Set dirs to a list of directories where prerequisite libraries
+# may be found:
+set(dirs
+   "@CMAKE_RUNTIME_OUTPUT_DIRECTORY@"
+   "@CMAKE_LIBRARY_OUTPUT_DIRECTORY@"
+   )
+
+
+cmakeListst добавить:
+
+install(TARGETS hello RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+include(InstallRequiredSystemLibraries)
+include(GNUInstallDirs)
+
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/FixBundle.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/FixBundle.cmake
+  @ONLY
+  )
+
+install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/FixBundle.cmake)
+
+include(CPack)

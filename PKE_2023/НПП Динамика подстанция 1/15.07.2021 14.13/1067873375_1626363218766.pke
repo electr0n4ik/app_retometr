@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RM3_ПКЭ Ver="1.0" UID="{3fa6745f-22d1-47a7-ab20-6a67dc6b8859}">
+    <Param_Check_PKE TimeStart="1626358380723" TimeStop="1626534780723" nameObject="НПП Динамика подстанция 1" averaging_interval_time="3000" averaging_interval="0" active_cxema="3"/>
+    <Result_Check_PKE pke_cxema="3" TimeTek="1626363218766" UAB="428.566" UBC="427.834" UCA="427.758" IA="0" IB="0" IC="0" UA="248.135" UB="245.074" UC="248.218" PO="0" PP="0" PH="0" QO="0" QP="0" QH="0" SO="0" SP="0" SH="0" UO="0.297769" UP="247.136" UH="2.25253" IO="0" IP="0" IH="0" KO="0.120487" KH="0.911454" Freq="-0.0223338" sigmaUy="12.3347" sigmaUyA="12.7887" sigmaUyB="11.3972" sigmaUyC="12.8265"/>
+</RM3_ПКЭ>

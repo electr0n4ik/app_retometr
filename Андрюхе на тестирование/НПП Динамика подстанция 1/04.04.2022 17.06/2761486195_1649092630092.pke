@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RM3_ПКЭ Ver="1.0" UID="{a498ef73-6096-4372-8fb1-97515f49cd6c}">
+    <Param_Check_PKE TimeStart="1649091960583" TimeStop="1649095560583" nameObject="НПП Динамика подстанция 1" averaging_interval_time="3000" averaging_interval="0" active_cxema="1"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092630092" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="18.7412" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092633113" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="14.375" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092636142" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="14.5562" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092639179" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="13.7933" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092642208" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="11.0104" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092645243" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="17.7153" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092648275" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="24.0434" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092651298" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="15.721" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092654347" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="14.1805" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092657372" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="21.2687" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092660404" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="18.9214" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092663429" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="17.5588" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092666453" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="18.0684" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092669482" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="15.2713" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092672501" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="19.8222" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092675527" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="13.9272" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092678551" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="17.429" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092681572" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="21.254" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092684608" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="18.2837" sigmaUy="-100"/>
+    <Result_Check_PKE pke_cxema="1" TimeTek="1649092687637" UA="0" IA="0" PA="0" QA="0" SA="0" Freq="19.7008" sigmaUy="-100"/>
+</RM3_ПКЭ>
